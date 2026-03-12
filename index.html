@@ -29,7 +29,9 @@
   --sidebar-w: 240px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Exo 2',sans-serif;background:var(--bg-deep);color:var(--text-bright);min-height:100vh;overflow-x:hidden}
+body{font-family:'Exo 2',sans-serif;background:var(--bg-deep);color:var(--text-bright);
+  min-height:100vh;overflow-x:hidden;-webkit-text-size-adjust:100%}
+img,table,td,th,input,select,textarea,button{max-width:100%}
 
 /* ─── SCROLLBAR ─────────────────────────────────────── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -246,48 +248,62 @@ tr:hover td{background:rgba(240,165,0,.04)}
 .chart-wrap{position:relative;max-height:280px}
 
 /* ─── RESPONSIVE ────────────────────────────────────── */
-@media(max-width:900px){
+@media(max-width:700px){
   .login-about{display:none}
   .login-page-inner{justify-content:center}
-  .login-box{width:100%;max-width:440px;border-left:none;
-    border-top:4px solid #f77f00;padding:40px 28px;
-    min-height:100vh;justify-content:center}
+  .login-box{width:100%;max-width:100%;border-left:none;
+    border-top:4px solid #f77f00;padding:36px 20px;
+    min-height:100vh;justify-content:center;border-radius:0}
+  #sidebar{transform:translateX(-100%);transition:.3s}
+  #sidebar.open{transform:translateX(0)}
+  #main{margin-left:0;width:100%;max-width:100vw}
+  .btn-menu{display:block}
+  .form-grid{grid-template-columns:1fr!important}
+  .cards-grid{grid-template-columns:1fr 1fr}
+  #content{padding:12px}
+  .modal-overlay{padding:8px;align-items:flex-start;padding-top:12px}
+  .modal{width:calc(100vw - 16px)!important;max-width:100%!important;padding:16px;border-radius:10px}
+  #topbar{padding:10px 12px}
+  .topbar-title{font-size:.95rem}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:480px}
+  .section-header{flex-wrap:wrap;gap:8px}
+  .inner-tabs{flex-wrap:wrap}
+  .inner-tab{flex:none;font-size:.74rem;padding:6px 10px}
+  .stat-value{font-size:1.3rem}
+  .estimator-card{padding:14px}
+  .chart-card{padding:12px}
+}
+@media(max-width:420px){
+  .cards-grid{grid-template-columns:1fr!important}
+  .login-box{padding:28px 14px}
+  .login-logo h1{font-size:2rem}
+  .btn-login{font-size:.92rem}
+  .btn{padding:7px 10px;font-size:.78rem}
+  .btn-xs{padding:3px 7px;font-size:.7rem}
+  #topbar{flex-wrap:wrap;gap:6px}
+  .topbar-right{width:100%;justify-content:flex-end}
+  .sync-badge span{display:none}
+}
+@media(min-width:701px) and (max-width:1024px){
   #sidebar{transform:translateX(-100%);transition:.3s}
   #sidebar.open{transform:translateX(0)}
   #main{margin-left:0}
   .btn-menu{display:block}
-  .form-grid{grid-template-columns:1fr}
-  .cards-grid{grid-template-columns:1fr 1fr}
-  #content{padding:14px}
+  .cards-grid{grid-template-columns:repeat(3,1fr)}
+  #content{padding:16px}
+  .login-about{padding:32px 22px}
+  .about-body p{font-size:.8rem;line-height:1.65}
+  .login-box{width:310px;padding:36px 22px}
 }
-@media(max-width:600px){
-  .cards-grid{grid-template-columns:1fr 1fr}
-  .modal{padding:14px;width:calc(100vw - 20px)!important;
-    max-width:100%;margin:10px}
-  #topbar{padding:10px 12px}
-  #content{padding:10px}
-  .tbl-wrap{font-size:.76rem}
-  td,th{padding:7px 8px}
-  .stat-value{font-size:1.3rem}
-  .section-header{flex-direction:column;align-items:flex-start;gap:8px}
-  .inner-tabs{flex-wrap:wrap;gap:3px}
-  .inner-tab{font-size:.74rem;padding:6px 8px}
-  .estimator-card{padding:12px}
-  .chart-card{padding:12px}
-  .topbar-title{font-size:1rem}
-  .btn{padding:7px 12px;font-size:.8rem}
-}
-@media(max-width:400px){
-  .cards-grid{grid-template-columns:1fr}
-  .login-box{padding:28px 16px}
-  .login-logo h1{font-size:2rem}
-  .btn-login{font-size:.95rem;padding:11px}
-  .modal{padding:12px}
+@media(min-width:1025px){
+  .btn-menu{display:none}
 }
 @media(min-width:1200px){
   .cards-grid{grid-template-columns:repeat(4,1fr)}
   #content{padding:28px 32px}
 }
+
 
 .overlay-back{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.5)}
 .overlay-back.open{display:block}
@@ -934,6 +950,8 @@ tr:hover td{background:rgba(240,165,0,.04)}
 <div class="modal">
   <button class="modal-close" onclick="closeModal('taxInvoice')">✕</button>
   <h3>Generate Tax Invoice</h3>
+  <input type="hidden" id="inv-contract-id">
+  <input type="hidden" id="inv-contract-type">
   <div class="form-grid">
     <div class="form-group">
       <label>Work Type</label>
@@ -1127,6 +1145,7 @@ function doLogin() {
     .catch(e => { err.textContent = e.message; });
 }
 function doLogout() {
+  stopAutoSync();
   if (auth) auth.signOut();
   else showLogin();
 }
@@ -1141,6 +1160,7 @@ function showApp() {
   renderTenderInputs();
   setPvtEst('column', document.querySelector('#pvtEstTabs .inner-tab'));
   setTimeout(renderDashboard, 500);
+  startAutoSync();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1170,6 +1190,41 @@ function syncNow() {
   if (!db || !firebaseOK) { notify('Firebase not available', 'error'); return; }
   setSyncStatus('syncing');
   saveAllToFirebase().then(() => { setSyncStatus('synced'); notify('Data synced to Firebase!', 'success'); closeModal('syncStatus'); });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUTO SYNC EVERY 15 SECONDS
+// ═══════════════════════════════════════════════════════════
+let autoSyncInterval = null;
+
+function startAutoSync() {
+  if (autoSyncInterval) clearInterval(autoSyncInterval);
+  autoSyncInterval = setInterval(async () => {
+    if (!db || !currentUser) return;
+    try {
+      await db.collection('_ping').doc('ping').set({ t: Date.now() });
+      firebaseOK = true;
+      const doc = await db.collection('vni').doc(currentUser.uid).get();
+      if (doc.exists) {
+        const remote = doc.data();
+        DATA = { ...DATA, ...remote };
+        saveLocal();
+      }
+      await db.collection('vni').doc(currentUser.uid).set(DATA);
+      setSyncStatus('synced');
+      renderAll();
+    } catch(e) {
+      firebaseOK = false;
+      setSyncStatus('offline');
+    }
+  }, 15000);
+}
+
+function stopAutoSync() {
+  if (autoSyncInterval) {
+    clearInterval(autoSyncInterval);
+    autoSyncInterval = null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1595,7 +1650,11 @@ function saveDepositRelease() {
 function openTaxInvoice(id, type) {
   const arr = type === 'gov' ? DATA.govContracts : DATA.pvtContracts;
   const c = arr.find(x => x.id === id);
-  if (c) document.getElementById('inv-value').value = c.value;
+  if (!c) return;
+  // Store contract reference for invoice
+  document.getElementById('inv-value').value = c.value;
+  document.getElementById('inv-contract-id').value = id;
+  document.getElementById('inv-contract-type').value = type;
   calcInvoice();
   openModal('taxInvoice');
 }
@@ -1603,36 +1662,128 @@ function calcInvoice() {
   const total = parseFloat(document.getElementById('inv-value').value)||0;
   const gstRate = parseFloat(document.getElementById('inv-gst').value)||12;
   const workType = document.getElementById('inv-worktype').value;
+  const cid = document.getElementById('inv-contract-id').value;
+  const ctype = document.getElementById('inv-contract-type').value;
+
   const baseValue = total / (1 + gstRate/100);
   const gstAmt = total - baseValue;
   const tds = baseValue * 0.02;
   const netPayable = total - tds;
+
+  // Get contract expense breakdown
+  let expBreakdown = '';
+  let totalExp = 0;
+  let commTotal = 0;
+
+  if (cid && ctype) {
+    const arr = ctype === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+    const c = arr.find(x => x.id === cid);
+    if (c) {
+      const exps = c.expenses || [];
+      totalExp = exps.reduce((s,e) => s+e.amount, 0);
+
+      // Group by category
+      const groups = {};
+      exps.forEach(e => {
+        const k = e.subcat || e.cat;
+        groups[k] = (groups[k]||0) + e.amount;
+      });
+
+      expBreakdown = Object.entries(groups).map(([k,v]) =>
+        `<div class="fin-row"><span class="fin-label">&nbsp;&nbsp;• ${k}</span>
+         <span class="fin-val" style="color:#d62828">− ${fmt(v)}</span></div>`
+      ).join('');
+
+      // LAD commissions if applicable
+      if (c.lad) {
+        const ladCommWork = c.value * (c.ladCommWork||15) / 100;
+        const ladCommAuth = c.value * (c.ladCommAuth||16) / 100;
+        commTotal = ladCommWork + ladCommAuth;
+        expBreakdown += `
+          <div class="fin-row"><span class="fin-label">&nbsp;&nbsp;• LAD Commission (Work ${c.ladCommWork||15}%)</span>
+           <span class="fin-val" style="color:#d62828">− ${fmt(ladCommWork)}</span></div>
+          <div class="fin-row"><span class="fin-label">&nbsp;&nbsp;• LAD Commission (Authority ${c.ladCommAuth||16}%)</span>
+           <span class="fin-val" style="color:#d62828">− ${fmt(ladCommAuth)}</span></div>`;
+      }
+    }
+  }
+
+  const netAfterExp = netPayable - totalExp - commTotal;
+  const profitPct = netPayable > 0 ? (netAfterExp / netPayable * 100).toFixed(1) : 0;
+
   document.getElementById('inv-result').innerHTML = `
     <div class="fin-card">
-      <div class="fin-card-header">Tax Invoice Summary — ${workType === 'earthwork' ? 'Earthwork' : 'General Construction'}</div>
-      <div class="fin-row"><span class="fin-label">Gross Invoice Value</span><span class="fin-val">${fmt(total)}</span></div>
-      <div class="fin-row"><span class="fin-label">Base Value (excl. GST)</span><span class="fin-val">${fmt(baseValue)}</span></div>
-      <div class="fin-row"><span class="fin-label">GST @${gstRate}%</span><span class="fin-val">${fmt(gstAmt)}</span></div>
-      <div class="fin-row"><span class="fin-label">TDS @2%</span><span class="fin-val red">${fmt(tds)}</span></div>
-      <div class="fin-row" style="background:rgba(34,214,122,.06)"><span class="fin-label" style="font-weight:600">Net Payable</span><span class="fin-val green" style="font-size:1.05rem">${fmt(netPayable)}</span></div>
-    </div>`;
+      <div class="fin-card-header">
+        Tax Invoice — ${workType === 'earthwork' ? 'Earthwork' : 'General Construction'}
+      </div>
+      <div class="fin-row"><span class="fin-label">Gross Invoice Value (incl. GST)</span>
+        <span class="fin-val">${fmt(total)}</span></div>
+      <div class="fin-row"><span class="fin-label">Base Value (excl. GST @${gstRate}%)</span>
+        <span class="fin-val">${fmt(baseValue)}</span></div>
+      <div class="fin-row"><span class="fin-label">GST Amount @${gstRate}%</span>
+        <span class="fin-val" style="color:#5a4080">${fmt(gstAmt)}</span></div>
+      <div class="fin-row"><span class="fin-label">TDS Deduction @2%</span>
+        <span class="fin-val" style="color:#d62828">− ${fmt(tds)}</span></div>
+      <div class="fin-row" style="background:#f0ebf8">
+        <span class="fin-label" style="font-weight:700;color:#1a0533">Net Payable to VNI</span>
+        <span class="fin-val" style="color:#1a9e5c;font-size:1.05rem">${fmt(netPayable)}</span>
+      </div>
+    </div>
+
+    ${totalExp > 0 || commTotal > 0 ? `
+    <div class="fin-card" style="margin-top:14px">
+      <div class="fin-card-header">Total Expenses Breakdown</div>
+      ${expBreakdown}
+      <div class="fin-row" style="background:#fff3e0">
+        <span class="fin-label" style="font-weight:700;color:#1a0533">Total Expenses + Commissions</span>
+        <span class="fin-val" style="color:#d62828;font-size:1.05rem">− ${fmt(totalExp + commTotal)}</span>
+      </div>
+    </div>
+
+    <div class="fin-card" style="margin-top:14px">
+      <div class="fin-card-header">Profit Summary</div>
+      <div class="fin-row"><span class="fin-label">Net Payable</span>
+        <span class="fin-val">${fmt(netPayable)}</span></div>
+      <div class="fin-row"><span class="fin-label">Total Expenses</span>
+        <span class="fin-val" style="color:#d62828">− ${fmt(totalExp)}</span></div>
+      ${commTotal > 0 ? `<div class="fin-row"><span class="fin-label">LAD Commissions</span>
+        <span class="fin-val" style="color:#d62828">− ${fmt(commTotal)}</span></div>` : ''}
+      <div class="fin-row" style="background:#e8f5e9">
+        <span class="fin-label" style="font-weight:700;color:#1a0533">Net Profit</span>
+        <span class="fin-val" style="color:${netAfterExp>=0?'#1a9e5c':'#d62828'};font-size:1.1rem">
+          ${fmt(netAfterExp)} (${profitPct}%)</span>
+      </div>
+    </div>` : ''}`;
 }
 function printInvoice() {
   const content = document.getElementById('inv-result').innerHTML;
   const win = window.open('', '_blank');
   win.document.write(`<html><head><title>VNI Tax Invoice</title>
-    <style>body{font-family:sans-serif;padding:24px;max-width:600px;margin:auto}
-    .fin-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
-    .fin-card-header{background:#f0a500;color:#000;padding:10px 16px;font-weight:700;border-radius:6px 6px 0 0}
-    .fin-card{border:1px solid #ddd;border-radius:6px;overflow:hidden}
-    .fin-label{color:#666}.fin-val{font-weight:600}
-    h2{color:#333}</style></head><body>
-    <h2>Vinayam Nirmanam Infra</h2>
-    <p>VNI Bhawan, Rapti Nagar, Gorakhpur UP-273003 | +91 8851965533</p>
-    <hr>${content}
-    <p style="margin-top:20px;color:#999;font-size:.85rem">Generated: ${new Date().toLocaleDateString('en-IN')}</p>
+    <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;padding:32px;max-width:680px;margin:auto;color:#222}
+    .fin-row{display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #eee}
+    .fin-card{border:1px solid #ddd;border-radius:8px;overflow:hidden;margin-bottom:16px}
+    .fin-card-header{background:#3a0ca3;color:#fff;padding:11px 16px;font-weight:700;font-size:.95rem}
+    .fin-label{color:#555;font-size:.88rem}.fin-val{font-weight:600;font-size:.9rem}
+    h2{color:#3a0ca3;font-size:1.5rem;margin-bottom:4px}
+    .header-bar{border-bottom:3px solid #f77f00;padding-bottom:12px;margin-bottom:20px}
+    .tag{color:#f77f00;font-size:.75rem;letter-spacing:1.5px;text-transform:uppercase}
+    </style></head><body>
+    <div class="header-bar">
+      <h2>Vinayam Nirmanam Infra</h2>
+      <div class="tag">Construction with Integrity</div>
+      <p style="margin-top:6px;color:#666;font-size:.82rem">
+        VNI Bhawan, Rapti Nagar, Gorakhpur UP-273003 &nbsp;|&nbsp; +91 8851965533
+      </p>
+    </div>
+    ${content}
+    <p style="margin-top:24px;color:#aaa;font-size:.78rem;text-align:right">
+      Generated: ${new Date().toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'})}
+    </p>
     </body></html>`);
-  win.print();
+  win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1668,20 +1819,36 @@ function calcFinancials() {
   const ongoingContracts = allContracts.filter(c => c.status==='construction');
   const completedValue = completedContracts.reduce((s,c) => s+c.value, 0);
   const ongoingValue = ongoingContracts.reduce((s,c) => s+c.value, 0);
-  const totalExpenses = allContracts.reduce((s,c) => s+(c.expenses||[]).reduce((ss,e) => ss+e.amount, 0), 0);
-  const totalReceived = allContracts.reduce((s,c) => s+(c.payments||[]).reduce((ss,p) => ss+p.amount, 0), 0);
-  const totalReceivable = allContracts.filter(c => c.status !== 'allotted').reduce((s,c) => {
-    const paid = (c.payments||[]).reduce((ss,p) => ss+p.amount, 0);
-    return s + (c.value - paid);
-  }, 0);
-  // EMD/Security receivable from gov contracts
-  const govDepositsReceivable = DATA.govContracts.reduce((s,c) => s+(c.emd||0)+(c.security||0), 0);
-  const totalEMDReleased = DATA.cashEntries.filter(e => e.desc&&e.desc.startsWith('EMD') || e.desc&&e.desc.startsWith('emd')).reduce((s,e) => e.type==='in'?s+e.amount:s-e.amount, 0);
+
+  // Total expenses recorded across ALL contracts
+  const totalExpenses = allContracts.reduce((s,c) =>
+    s + (c.expenses||[]).reduce((ss,e) => ss+e.amount, 0), 0);
+
+  // Total payments actually received so far
+  const totalReceived = allContracts.reduce((s,c) =>
+    s + (c.payments||[]).reduce((ss,p) => ss+p.amount, 0), 0);
+
+  // Receivable = contract value - payments already received (only active/completed contracts)
+  const totalReceivable = allContracts
+    .filter(c => c.status !== 'allotted')
+    .reduce((s,c) => {
+      const paid = (c.payments||[]).reduce((ss,p) => ss+p.amount, 0);
+      return s + Math.max(0, c.value - paid);
+    }, 0);
+
   const cash = cashIn - cashOut;
   const bank = bankIn - bankOut;
-  const grossProfit = completedValue + totalReceived - totalExpenses;
+
+  // CORRECT: Gross Profit = Money Received − Total Expenses
+  // (NOT tender value, only actual money received minus what was spent)
+  const grossProfit = totalReceived - totalExpenses;
   const netProfit = grossProfit - totalCommission;
-  return { cash, bank, totalExpenses, totalReceivable, totalCommission, grossProfit, netProfit, completedValue, ongoingValue, completedContracts, ongoingContracts, allContracts, totalReceived };
+
+  return {
+    cash, bank, totalExpenses, totalReceivable, totalCommission,
+    grossProfit, netProfit, completedValue, ongoingValue,
+    completedContracts, ongoingContracts, allContracts, totalReceived
+  };
 }
 
 function renderFinance() {
