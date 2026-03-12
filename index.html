@@ -1146,10 +1146,17 @@ function doLogin() {
 }
 function doLogout() {
   stopAutoSync();
-  if (auth) {
-    auth.signOut().then(() => { window.location.reload(); });
+  // Force one final sync before logout to ensure nothing is lost
+  if (db && currentUser) {
+    setSyncStatus('syncing');
+    db.collection('vni').doc(currentUser.uid).set(DATA)
+      .finally(() => {
+        if (auth) auth.signOut().then(() => window.location.reload());
+        else window.location.reload();
+      });
   } else {
-    window.location.reload();
+    if (auth) auth.signOut().then(() => window.location.reload());
+    else window.location.reload();
   }
 }
 function showLogin() {
@@ -1159,10 +1166,10 @@ function showLogin() {
 function showApp() {
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  loadData();
   renderTenderInputs();
   setPvtEst('column', document.querySelector('#pvtEstTabs .inner-tab'));
-  setTimeout(renderDashboard, 500);
+  setSyncStatus('syncing');
+  loadData();
   startAutoSync();
 }
 
@@ -1196,26 +1203,20 @@ function syncNow() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  AUTO SYNC EVERY 15 SECONDS
+//  AUTO SYNC — REAL TIME, INSTANT ON EVERY SAVE
 // ═══════════════════════════════════════════════════════════
 let autoSyncInterval = null;
+let syncDebounceTimer = null;
 
 function startAutoSync() {
+  // Also keep a heartbeat every 15s to catch any missed saves
   if (autoSyncInterval) clearInterval(autoSyncInterval);
   autoSyncInterval = setInterval(async () => {
     if (!db || !currentUser) return;
     try {
-      await db.collection('_ping').doc('ping').set({ t: Date.now() });
-      firebaseOK = true;
-      const doc = await db.collection('vni').doc(currentUser.uid).get();
-      if (doc.exists) {
-        const remote = doc.data();
-        DATA = { ...DATA, ...remote };
-        saveLocal();
-      }
       await db.collection('vni').doc(currentUser.uid).set(DATA);
+      firebaseOK = true;
       setSyncStatus('synced');
-      renderAll();
     } catch(e) {
       firebaseOK = false;
       setSyncStatus('offline');
@@ -1224,10 +1225,8 @@ function startAutoSync() {
 }
 
 function stopAutoSync() {
-  if (autoSyncInterval) {
-    clearInterval(autoSyncInterval);
-    autoSyncInterval = null;
-  }
+  if (autoSyncInterval) { clearInterval(autoSyncInterval); autoSyncInterval = null; }
+  if (syncDebounceTimer) { clearTimeout(syncDebounceTimer); syncDebounceTimer = null; }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1245,22 +1244,55 @@ function saveLocal() {
 }
 
 async function loadData() {
+  // Always load local first so UI is instant
   loadLocalData();
-  if (db && firebaseOK && currentUser) {
-    try {
-      const doc = await db.collection('vni').doc(currentUser.uid).get();
-      if (doc.exists) { DATA = { ...DATA, ...doc.data() }; }
-    } catch(e) { console.warn('Firestore load failed:', e); }
-  }
   renderAll();
-}
-function saveData() {
-  saveLocal();
-  if (db && firebaseOK && currentUser) {
-    db.collection('vni').doc(currentUser.uid).set(DATA, { merge: true }).catch(e => {
+  // Then immediately try Firebase regardless of firebaseOK flag
+  if (db && currentUser) {
+    try {
+      setSyncStatus('syncing');
+      const doc = await db.collection('vni').doc(currentUser.uid).get();
+      if (doc.exists) {
+        DATA = { ...DATA, ...doc.data() };
+        saveLocal();
+      }
+      // Push any local-only data back up
+      await db.collection('vni').doc(currentUser.uid).set(DATA);
+      firebaseOK = true;
+      setSyncStatus('synced');
+      renderAll();
+    } catch(e) {
+      console.warn('Firestore load failed:', e);
       firebaseOK = false;
       setSyncStatus('offline');
-    });
+    }
+  }
+}
+function saveData() {
+  // 1. Always save to localStorage immediately — zero data loss
+  saveLocal();
+  // 2. Push to Firebase instantly (debounced 800ms to batch rapid inputs)
+  if (db && currentUser) {
+    setSyncStatus('syncing');
+    if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = setTimeout(async () => {
+      try {
+        await db.collection('vni').doc(currentUser.uid).set(DATA);
+        firebaseOK = true;
+        setSyncStatus('synced');
+      } catch(e) {
+        firebaseOK = false;
+        setSyncStatus('offline');
+        // Retry once after 3 seconds
+        setTimeout(async () => {
+          try {
+            await db.collection('vni').doc(currentUser.uid).set(DATA);
+            firebaseOK = true;
+            setSyncStatus('synced');
+          } catch(e2) { console.warn('Retry sync failed:', e2); }
+        }, 3000);
+      }
+    }, 800);
   }
 }
 async function saveAllToFirebase() {
