@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VNI – Vinayam Nirmanam Infra</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0d14;
+  --bg-card: #111520;
+  --bg-panel: #161c2c;
+  --bg-sidebar: #0d1020;
+  --accent: #f0a500;
+  --accent2: #e05c00;
+  --accent-glow: rgba(240,165,0,0.18);
+  --text-bright: #f0f4ff;
+  --text-mid: #8a9ab8;
+  --text-dim: #4a5672;
+  --border: rgba(240,165,0,0.15);
+  --border-bright: rgba(240,165,0,0.4);
+  --green: #22d67a;
+  --red: #f04a4a;
+  --blue: #3a9cf7;
+  --sidebar-w: 240px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Exo 2',sans-serif;background:var(--bg-deep);color:var(--text-bright);min-height:100vh;overflow-x:hidden}
+
+/* ─── SCROLLBAR ─────────────────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg-deep)}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px}
+
+/* ─── LOGIN PAGE ────────────────────────────────────── */
+#loginPage{display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:radial-gradient(ellipse at 60% 40%, #1a1200 0%, var(--bg-deep) 70%)}
+.login-box{background:var(--bg-card);border:1px solid var(--border-bright);
+  border-radius:16px;padding:48px 40px;width:420px;max-width:95vw;
+  box-shadow:0 0 60px rgba(240,165,0,0.12)}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo h1{font-family:'Rajdhani',sans-serif;font-size:2.4rem;font-weight:700;
+  color:var(--accent);letter-spacing:3px}
+.login-logo p{color:var(--text-mid);font-size:.85rem;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px}
+.login-form label{display:block;color:var(--text-mid);font-size:.78rem;
+  letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;margin-top:20px}
+.login-form input{width:100%;background:var(--bg-panel);border:1px solid var(--border);
+  color:var(--text-bright);padding:12px 16px;border-radius:8px;font-family:'Exo 2',sans-serif;
+  font-size:.95rem;outline:none;transition:.2s}
+.login-form input:focus{border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow)}
+.btn-login{width:100%;margin-top:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#000;font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700;
+  letter-spacing:2px;padding:14px;border:none;border-radius:8px;cursor:pointer;
+  transition:.2s;text-transform:uppercase}
+.btn-login:hover{opacity:.85;transform:translateY(-1px)}
+.login-err{color:var(--red);font-size:.82rem;margin-top:10px;text-align:center}
+
+/* ─── APP LAYOUT ────────────────────────────────────── */
+#app{display:none;flex-direction:row;min-height:100vh}
+
+/* ─── SIDEBAR ───────────────────────────────────────── */
+#sidebar{width:var(--sidebar-w);background:var(--bg-sidebar);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  position:fixed;height:100vh;z-index:100;transition:.3s}
+.sidebar-brand{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.sidebar-brand h2{font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;color:var(--accent)}
+.sidebar-brand p{font-size:.68rem;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 0}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 18px;cursor:pointer;
+  color:var(--text-mid);font-size:.88rem;font-weight:500;transition:.15s;
+  border-left:3px solid transparent;position:relative}
+.nav-item:hover{color:var(--text-bright);background:rgba(240,165,0,0.06)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);
+  background:rgba(240,165,0,0.08)}
+.nav-item .nav-icon{font-size:1rem;width:20px;text-align:center}
+.nav-section{padding:14px 18px 4px;font-size:.65rem;letter-spacing:2px;
+  text-transform:uppercase;color:var(--text-dim)}
+.sidebar-footer{padding:14px 18px;border-top:1px solid var(--border)}
+.btn-logout{width:100%;background:rgba(240,80,80,0.12);border:1px solid rgba(240,80,80,0.3);
+  color:#f07070;padding:9px;border-radius:7px;cursor:pointer;font-family:'Exo 2',sans-serif;
+  font-size:.85rem;transition:.2s}
+.btn-logout:hover{background:rgba(240,80,80,0.22)}
+
+/* ─── MAIN CONTENT ──────────────────────────────────── */
+#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+#topbar{background:var(--bg-card);border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50}
+.topbar-title{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.sync-badge{display:flex;align-items:center;gap:7px;background:var(--bg-panel);
+  border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:.75rem;cursor:pointer}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-badge.offline .sync-dot{background:var(--red);animation:none}
+.sync-badge.syncing .sync-dot{background:var(--accent);animation:pulse .8s infinite}
+.btn-sync-now{background:var(--accent);color:#000;border:none;border-radius:14px;
+  padding:5px 14px;font-size:.75rem;font-weight:600;cursor:pointer;display:none}
+.btn-menu{display:none;background:transparent;border:none;color:var(--text-bright);
+  font-size:1.4rem;cursor:pointer}
+
+#content{padding:24px;flex:1;overflow-y:auto}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ─── STAT CARDS ────────────────────────────────────── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;
+  padding:18px;position:relative;overflow:hidden;transition:.2s}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.stat-card:hover{border-color:var(--border-bright);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.stat-label{font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
+.stat-value{font-family:'Rajdhani',sans-serif;font-size:1.7rem;font-weight:700;color:var(--text-bright)}
+.stat-value.green{color:var(--green)}
+.stat-value.red{color:var(--red)}
+.stat-value.accent{color:var(--accent)}
+.stat-sub{font-size:.75rem;color:var(--text-mid);margin-top:4px}
+
+/* ─── SECTION HEADERS ───────────────────────────────── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-family:'Rajdhani',sans-serif;font-size:1.2rem;font-weight:700;
+  color:var(--text-bright);letter-spacing:1px}
+.section-title span{color:var(--accent)}
+
+/* ─── BUTTONS ───────────────────────────────────────── */
+.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;
+  font-family:'Exo 2',sans-serif;font-size:.85rem;font-weight:600;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000}
+.btn-primary:hover{opacity:.85}
+.btn-secondary{background:var(--bg-panel);border:1px solid var(--border);color:var(--text-mid)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:rgba(240,74,74,.15);border:1px solid rgba(240,74,74,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(240,74,74,.25)}
+.btn-success{background:rgba(34,214,122,.15);border:1px solid rgba(34,214,122,.3);color:var(--green)}
+.btn-success:hover{background:rgba(34,214,122,.25)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+.btn-xs{padding:3px 9px;font-size:.72rem}
+
+/* ─── TABLES ────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th{background:var(--bg-panel);color:var(--text-mid);font-size:.7rem;letter-spacing:1.5px;
+  text-transform:uppercase;padding:11px 14px;text-align:left;font-weight:500}
+td{padding:11px 14px;border-top:1px solid var(--border);color:var(--text-bright);vertical-align:middle}
+tr:hover td{background:rgba(240,165,0,.04)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
+.badge-allotted{background:rgba(58,156,247,.15);color:var(--blue);border:1px solid rgba(58,156,247,.3)}
+.badge-construction{background:rgba(240,165,0,.15);color:var(--accent);border:1px solid rgba(240,165,0,.3)}
+.badge-completed{background:rgba(34,214,122,.15);color:var(--green);border:1px solid rgba(34,214,122,.3)}
+
+/* ─── FORMS / MODALS ─────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:14px;
+  padding:28px;width:640px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative}
+.modal h3{font-family:'Rajdhani',sans-serif;font-size:1.25rem;font-weight:700;
+  color:var(--accent);margin-bottom:20px;letter-spacing:1px}
+.modal-close{position:absolute;top:16px;right:18px;background:none;border:none;
+  color:var(--text-mid);font-size:1.3rem;cursor:pointer}
+.modal-close:hover{color:var(--red)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid .full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:.73rem;letter-spacing:1px;text-transform:uppercase;color:var(--text-mid)}
+.form-group input,.form-group select,.form-group textarea{
+  background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);
+  padding:9px 13px;border-radius:7px;font-family:'Exo 2',sans-serif;font-size:.88rem;outline:none;transition:.2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 8px var(--accent-glow)}
+.form-group select option{background:var(--bg-panel)}
+.form-group textarea{resize:vertical;min-height:70px}
+.form-group input[type="checkbox"]{width:auto;accent-color:var(--accent)}
+.check-row{display:flex;align-items:center;gap:8px;padding:8px 0}
+.check-row label{text-transform:none;letter-spacing:0;font-size:.88rem;color:var(--text-bright)}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+.divider{border:none;border-top:1px solid var(--border);margin:18px 0}
+.info-box{background:rgba(240,165,0,.08);border:1px solid var(--border);
+  border-radius:8px;padding:12px;font-size:.82rem;color:var(--text-mid);margin-bottom:14px}
+
+/* ─── TENDER ESTIMATOR ──────────────────────────────── */
+.estimator-card{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:12px;padding:22px;margin-bottom:20px}
+.estimator-card h4{font-family:'Rajdhani',sans-serif;font-size:1.05rem;font-weight:600;
+  color:var(--accent);margin-bottom:14px;letter-spacing:1px}
+.result-row{display:flex;justify-content:space-between;padding:6px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);font-size:.88rem}
+.result-row:last-child{border-bottom:none;padding-top:10px;font-weight:700;font-size:1rem;color:var(--accent)}
+.result-label{color:var(--text-mid)}
+.result-value{font-family:'Share Tech Mono',monospace;color:var(--text-bright)}
+
+/* ─── BOQ TABLE ─────────────────────────────────────── */
+.boq-table input{background:var(--bg-panel);border:1px solid transparent;
+  color:var(--text-bright);padding:5px 8px;border-radius:5px;font-family:'Share Tech Mono',monospace;
+  font-size:.82rem;width:100%;outline:none}
+.boq-table input:focus{border-color:var(--accent)}
+.boq-total-row td{background:var(--bg-panel)!important;font-weight:700;color:var(--accent)}
+
+/* ─── CHART WRAPPER ─────────────────────────────────── */
+.chart-card{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:12px;padding:20px;margin-bottom:20px}
+.chart-card h4{font-family:'Rajdhani',sans-serif;font-size:1rem;color:var(--accent);
+  margin-bottom:14px;letter-spacing:1px}
+.chart-wrap{position:relative;max-height:280px}
+
+/* ─── RESPONSIVE ────────────────────────────────────── */
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%);transition:.3s}
+  #sidebar.open{transform:translateX(0)}
+  #main{margin-left:0}
+  .btn-menu{display:block}
+  .form-grid{grid-template-columns:1fr}
+  .cards-grid{grid-template-columns:1fr 1fr}
+  #content{padding:14px}
+}
+@media(max-width:480px){
+  .cards-grid{grid-template-columns:1fr}
+  .modal{padding:18px}
+}
+.overlay-back{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.5)}
+.overlay-back.open{display:block}
+
+/* ─── FINANCE / WEALTH ──────────────────────────────── */
+.fin-row{display:flex;justify-content:space-between;align-items:center;
+  padding:11px 16px;border-bottom:1px solid var(--border)}
+.fin-row:last-child{border-bottom:none}
+.fin-label{color:var(--text-mid);font-size:.88rem}
+.fin-val{font-family:'Share Tech Mono',monospace;font-size:.95rem;color:var(--text-bright)}
+.fin-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.fin-card-header{background:var(--bg-panel);padding:12px 16px;font-family:'Rajdhani',sans-serif;
+  font-size:1rem;font-weight:600;color:var(--accent);letter-spacing:1px}
+
+/* ─── EXPENSE CATEGORY PILLS ─────────────────────────── */
+.cat-pill{display:inline-block;background:var(--bg-panel);border:1px solid var(--border);
+  border-radius:20px;padding:3px 12px;font-size:.75rem;color:var(--text-mid);margin:2px}
+.cat-pill.selected{background:rgba(240,165,0,.15);border-color:var(--accent);color:var(--accent)}
+
+/* ─── EXPENSE SUB-CATEGORY ───────────────────────────── */
+.sub-cats{margin-left:16px;padding:6px 0}
+
+/* ─── NOTIFICATION ───────────────────────────────────── */
+.notif{position:fixed;bottom:24px;right:24px;background:var(--bg-panel);
+  border:1px solid var(--border-bright);border-radius:10px;padding:14px 20px;
+  font-size:.88rem;z-index:999;display:none;animation:slideIn .3s ease}
+.notif.show{display:block}
+.notif.success{border-color:var(--green);color:var(--green)}
+.notif.error{border-color:var(--red);color:var(--red)}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ─── EXPENSE LIST ───────────────────────────────────── */
+.exp-group{margin-bottom:16px}
+.exp-group-header{font-size:.75rem;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text-dim);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:8px}
+.exp-item{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:.85rem}
+.exp-item:last-child{border-bottom:none}
+
+/* ─── MATERIAL CALC ──────────────────────────────────── */
+.mat-result{background:var(--bg-panel);border-radius:10px;padding:16px;margin-top:16px}
+.mat-result h5{font-family:'Rajdhani',sans-serif;color:var(--accent);margin-bottom:10px}
+
+/* ─── PART PAYMENT ───────────────────────────────────── */
+.payment-item{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.85rem}
+.payment-date{font-size:.75rem;color:var(--text-dim);font-family:'Share Tech Mono',monospace}
+
+/* ─── LAD CALC ───────────────────────────────────────── */
+.lad-result{background:rgba(240,165,0,.06);border:1px solid var(--border);
+  border-radius:10px;padding:16px;margin-top:16px}
+
+/* ─── TABS WITHIN SECTIONS ───────────────────────────── */
+.inner-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:8px;padding:4px}
+.inner-tab{flex:1;padding:8px;text-align:center;cursor:pointer;border-radius:6px;
+  font-size:.82rem;font-weight:500;color:var(--text-mid);transition:.2s}
+.inner-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-weight:700}
+
+/* ─── COMMISSION TRACK ───────────────────────────────── */
+.comm-item{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.85rem}
+.comm-item:last-child{border-bottom:none}
+
+/* ─── EMPTY STATE ────────────────────────────────────── */
+.empty-state{text-align:center;padding:40px;color:var(--text-dim)}
+.empty-state .empty-icon{font-size:2.5rem;margin-bottom:10px;opacity:.4}
+.empty-state p{font-size:.88rem}
+</style>
+</head>
+<body>
+
+<!-- ═══ NOTIFICATION ════════════════════════════════════ -->
+<div class="notif" id="notif"></div>
+
+<!-- ═══ LOGIN PAGE ══════════════════════════════════════ -->
+<div id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>VNI</h1>
+      <p>Vinayam Nirmanam Infra</p>
+      <div style="color:var(--text-dim);font-size:.75rem;margin-top:6px">Construction with Integrity</div>
+    </div>
+    <div class="login-form">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@vni.com">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="••••••••">
+      <button class="btn-login" onclick="doLogin()">LOGIN</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+    <div style="margin-top:18px;text-align:center;color:var(--text-dim);font-size:.75rem">
+      VNI Bhawan, Rapti Nagar, Gorakhpur UP-273003<br>+91 8851965533
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SIDEBAR OVERLAY (mobile) ════════════════════════ -->
+<div class="overlay-back" id="overlayBack" onclick="closeSidebar()"></div>
+
+<!-- ═══ APP ══════════════════════════════════════════════ -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-brand">
+      <h2>VNI</h2>
+      <p>Construction with Integrity</p>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="showTab('dashboard')">
+        <span class="nav-icon">📊</span>Dashboard
+      </div>
+      <div class="nav-section">Contracts</div>
+      <div class="nav-item" onclick="showTab('govContracts')">
+        <span class="nav-icon">🏛️</span>Government Contracts
+      </div>
+      <div class="nav-item" onclick="showTab('pvtContracts')">
+        <span class="nav-icon">🏢</span>Private Contracts
+      </div>
+      <div class="nav-section">Finance</div>
+      <div class="nav-item" onclick="showTab('finance')">
+        <span class="nav-icon">💰</span>Finance
+      </div>
+      <div class="nav-item" onclick="showTab('wealth')">
+        <span class="nav-icon">📈</span>Wealth
+      </div>
+      <div class="nav-section">Tools</div>
+      <div class="nav-item" onclick="showTab('tenderEst')">
+        <span class="nav-icon">📐</span>Tender Estimator
+      </div>
+      <div class="nav-item" onclick="showTab('pvtEst')">
+        <span class="nav-icon">🏗️</span>Private Estimator
+      </div>
+      <div class="nav-item" onclick="showTab('boq')">
+        <span class="nav-icon">📋</span>BOQ Generator
+      </div>
+      <div class="nav-item" onclick="showTab('matCalc')">
+        <span class="nav-icon">🧱</span>Material Calculator
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="doLogout()">⬍ Logout</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <!-- TOP BAR -->
+    <div id="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn-menu" onclick="openSidebar()">☰</button>
+        <div class="topbar-title" id="pageTitle">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="sync-badge" id="syncBadge" onclick="checkSyncStatus()">
+          <div class="sync-dot"></div>
+          <span id="syncText">Firebase Synced</span>
+        </div>
+        <button class="btn-sync-now" id="btnSyncNow" onclick="syncNow()">Sync Now</button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="content">
+
+<!-- ═══════════════════════════════════════════════════════
+     DASHBOARD TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane active" id="tab-dashboard">
+  <div class="cards-grid" id="dashCards">
+    <div class="stat-card">
+      <div class="stat-label">Completed Work Value</div>
+      <div class="stat-value green" id="dc-completed">₹0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Ongoing Work Value</div>
+      <div class="stat-value accent" id="dc-ongoing">₹0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Contracts Ongoing</div>
+      <div class="stat-value" id="dc-ongoing-count">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Money Receivable</div>
+      <div class="stat-value accent" id="dc-receivable">₹0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cash in Hand</div>
+      <div class="stat-value green" id="dc-cash">₹0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Net Profit</div>
+      <div class="stat-value green" id="dc-profit">₹0</div>
+    </div>
+    <div class="stat-card" style="grid-column:1/-1">
+      <div class="stat-label">Firm Value (Portfolio × 2)</div>
+      <div class="stat-value accent" id="dc-firmvalue">₹0</div>
+    </div>
+  </div>
+
+  <!-- BID CAPACITY -->
+  <div class="estimator-card">
+    <h4>🏆 Bid Capacity Calculator</h4>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group">
+        <label>Best Year Work Value (A) ₹</label>
+        <input type="number" id="bidA" placeholder="0" oninput="calcBidCapacity()">
+      </div>
+      <div class="form-group">
+        <label>Completion Time (N months)</label>
+        <input type="number" id="bidN" placeholder="0" oninput="calcBidCapacity()">
+      </div>
+      <div class="form-group">
+        <label>Ongoing Work Value (B) ₹</label>
+        <input type="number" id="bidB" placeholder="0" oninput="calcBidCapacity()">
+      </div>
+    </div>
+    <div class="result-row"><span class="result-label">A × 2</span><span class="result-value" id="bid-a2">₹0</span></div>
+    <div class="result-row"><span class="result-label">N (years)</span><span class="result-value" id="bid-nyears">0</span></div>
+    <div class="result-row"><span class="result-label">Bid Capacity = (A × N × 2) − B</span><span class="result-value accent" id="bid-capacity">₹0</span></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="chart-card">
+      <h4>💼 Contract Status Overview</h4>
+      <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h4>💸 Expense Breakdown</h4>
+      <div class="chart-wrap"><canvas id="chartExp"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     GOVERNMENT CONTRACTS TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-govContracts">
+  <div class="section-header">
+    <div class="section-title">🏛️ Government <span>Contracts</span></div>
+    <button class="btn btn-primary" onclick="openModal('addGovContract')">+ Add Contract</button>
+  </div>
+  <div class="inner-tabs">
+    <div class="inner-tab active" onclick="filterContracts('gov','allotted',this)">Allotted</div>
+    <div class="inner-tab" onclick="filterContracts('gov','construction',this)">Under Construction</div>
+    <div class="inner-tab" onclick="filterContracts('gov','completed',this)">Completed</div>
+    <div class="inner-tab" onclick="filterContracts('gov','all',this)">All</div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Contract Name</th><th>Client</th><th>Tender Value</th>
+        <th>EMD</th><th>Security</th><th>Status</th><th>LAD</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="govContractsTbl"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PRIVATE CONTRACTS TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-pvtContracts">
+  <div class="section-header">
+    <div class="section-title">🏢 Private <span>Contracts</span></div>
+    <button class="btn btn-primary" onclick="openModal('addPvtContract')">+ Add Contract</button>
+  </div>
+  <div class="inner-tabs">
+    <div class="inner-tab active" onclick="filterContracts('pvt','allotted',this)">Allotted</div>
+    <div class="inner-tab" onclick="filterContracts('pvt','construction',this)">Under Construction</div>
+    <div class="inner-tab" onclick="filterContracts('pvt','completed',this)">Completed</div>
+    <div class="inner-tab" onclick="filterContracts('pvt','all',this)">All</div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Contract Name</th><th>Client</th><th>Tender Value</th>
+        <th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="pvtContractsTbl"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     FINANCE TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-finance">
+  <div class="section-header">
+    <div class="section-title">💰 Finance <span>Overview</span></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="openModal('cashEntry')">+ Cash Entry</button>
+      <button class="btn btn-secondary" onclick="openModal('bankEntry')">+ Bank Entry</button>
+      <button class="btn btn-secondary" onclick="openModal('commEntry')">+ Commission</button>
+    </div>
+  </div>
+  <div class="fin-card">
+    <div class="fin-card-header">Financial Summary</div>
+    <div class="fin-row"><span class="fin-label">Cash in Hand</span><span class="fin-val green" id="fin-cash">₹0</span></div>
+    <div class="fin-row"><span class="fin-label">Bank Balance</span><span class="fin-val green" id="fin-bank">₹0</span></div>
+    <div class="fin-row"><span class="fin-label">Total Expenses</span><span class="fin-val red" id="fin-expenses">₹0</span></div>
+    <div class="fin-row"><span class="fin-label">Total Money Receivable</span><span class="fin-val accent" id="fin-receivable">₹0</span></div>
+    <div class="fin-row"><span class="fin-label">Commission Given</span><span class="fin-val red" id="fin-commission">₹0</span></div>
+    <div class="fin-row"><span class="fin-label">Gross Profit</span><span class="fin-val green" id="fin-gross">₹0</span></div>
+    <div class="fin-row" style="background:rgba(240,165,0,.05)"><span class="fin-label" style="font-weight:600;color:var(--text-bright)">Net Profit (after Commission)</span><span class="fin-val accent" style="font-size:1.1rem" id="fin-net">₹0</span></div>
+  </div>
+  <div class="section-header"><div class="section-title">Commission <span>Tracker</span></div></div>
+  <div class="fin-card">
+    <div class="fin-card-header">Commission Payments</div>
+    <div id="commList" style="padding:0 0 8px"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     WEALTH TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-wealth">
+  <div class="section-title" style="margin-bottom:20px">📈 Wealth <span style="color:var(--accent)">Summary</span></div>
+  <div class="cards-grid">
+    <div class="stat-card"><div class="stat-label">Cash in Hand</div><div class="stat-value green" id="w-cash">₹0</div></div>
+    <div class="stat-card"><div class="stat-label">Bank Balance</div><div class="stat-value green" id="w-bank">₹0</div></div>
+    <div class="stat-card"><div class="stat-label">Total Work Completed</div><div class="stat-value" id="w-completed">₹0</div></div>
+    <div class="stat-card"><div class="stat-label">Total Work In Progress</div><div class="stat-value accent" id="w-ongoing">₹0</div></div>
+    <div class="stat-card"><div class="stat-label">Total Commission Given</div><div class="stat-value red" id="w-comm">₹0</div></div>
+    <div class="stat-card"><div class="stat-label">Gross Profit</div><div class="stat-value green" id="w-gross">₹0</div></div>
+    <div class="stat-card" style="grid-column:1/-1"><div class="stat-label">Net Profit (after Commission)</div><div class="stat-value accent" style="font-size:2rem" id="w-net">₹0</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     TENDER ESTIMATOR TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-tenderEst">
+  <div class="section-title" style="margin-bottom:20px">📐 Tender <span style="color:var(--accent)">Estimator</span></div>
+  <div class="estimator-card">
+    <h4>Project Type & Tender Details</h4>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Project Type</label>
+        <select id="te-type" onchange="renderTenderInputs()">
+          <option value="ccroad">CC Road</option>
+          <option value="brickwall">Brick Wall</option>
+          <option value="culvert">3m Brick Culvert</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tender Value ₹</label>
+        <input type="number" id="te-tender" placeholder="0" oninput="calcTender()">
+      </div>
+    </div>
+  </div>
+  <div class="estimator-card">
+    <h4>Material Prices</h4>
+    <div class="form-grid">
+      <div class="form-group"><label>Cement (per 50kg bag) ₹</label><input type="number" id="te-cement" value="380" oninput="calcTender()"></div>
+      <div class="form-group"><label>Sand (per CFT) ₹</label><input type="number" id="te-sand" value="35" oninput="calcTender()"></div>
+      <div class="form-group"><label>Aggregate (per CFT) ₹</label><input type="number" id="te-agg" value="40" oninput="calcTender()"></div>
+      <div class="form-group"><label>Steel (per kg) ₹</label><input type="number" id="te-steel" value="65" oninput="calcTender()"></div>
+    </div>
+  </div>
+  <div class="estimator-card" id="te-dimCard">
+    <h4>Dimensions</h4>
+    <div id="te-dims" class="form-grid"></div>
+  </div>
+  <div class="estimator-card" id="te-results" style="display:none">
+    <h4>Estimated Results</h4>
+    <div id="te-result-rows"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PRIVATE ESTIMATOR TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-pvtEst">
+  <div class="section-title" style="margin-bottom:20px">🏗️ Private Construction <span style="color:var(--accent)">Estimator</span></div>
+  <div class="inner-tabs" id="pvtEstTabs">
+    <div class="inner-tab active" onclick="setPvtEst('column',this)">RCC Column</div>
+    <div class="inner-tab" onclick="setPvtEst('beam',this)">RCC Beam</div>
+    <div class="inner-tab" onclick="setPvtEst('lintel',this)">RCC Lintel</div>
+    <div class="inner-tab" onclick="setPvtEst('brickwall',this)">Brick Wall</div>
+    <div class="inner-tab" onclick="setPvtEst('plaster',this)">Plaster</div>
+  </div>
+  <div class="estimator-card">
+    <h4>Material Prices</h4>
+    <div class="form-grid">
+      <div class="form-group"><label>Cement (per 50kg bag) ₹</label><input type="number" id="pe-cement" value="380" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Sand (per CFT) ₹</label><input type="number" id="pe-sand" value="35" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Aggregate (per CFT) ₹</label><input type="number" id="pe-agg" value="40" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Steel (per kg) ₹</label><input type="number" id="pe-steel" value="65" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Brick (per piece) ₹</label><input type="number" id="pe-brick" value="8" oninput="calcPvtEst()"></div>
+    </div>
+  </div>
+  <div class="estimator-card">
+    <h4>Dimensions</h4>
+    <div id="pe-dims" class="form-grid"></div>
+  </div>
+  <div class="estimator-card" id="pe-results" style="display:none">
+    <h4>Results</h4>
+    <div id="pe-result-rows"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     BOQ GENERATOR TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-boq">
+  <div class="section-header">
+    <div class="section-title">📋 BOQ <span>Generator</span></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="addBOQRow()">+ Add Row</button>
+      <button class="btn btn-primary" onclick="exportBOQ()">Export CSV</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table class="boq-table">
+      <thead><tr>
+        <th style="width:50px">#</th>
+        <th>Description</th>
+        <th style="width:80px">Unit</th>
+        <th style="width:100px">Quantity</th>
+        <th style="width:100px">Rate ₹</th>
+        <th style="width:120px">Amount ₹</th>
+        <th style="width:40px"></th>
+      </tr></thead>
+      <tbody id="boqBody"></tbody>
+      <tfoot>
+        <tr class="boq-total-row">
+          <td colspan="5" style="text-align:right">Subtotal</td>
+          <td id="boq-subtotal">₹0</td><td></td>
+        </tr>
+        <tr>
+          <td colspan="4" style="text-align:right;color:var(--text-mid)">Overhead %</td>
+          <td><input type="number" id="boq-overhead" value="10" oninput="calcBOQ()" style="background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;width:80px;font-size:.82rem;outline:none"></td>
+          <td id="boq-overhead-val">₹0</td><td></td>
+        </tr>
+        <tr>
+          <td colspan="4" style="text-align:right;color:var(--text-mid)">Profit %</td>
+          <td><input type="number" id="boq-profit" value="15" oninput="calcBOQ()" style="background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;width:80px;font-size:.82rem;outline:none"></td>
+          <td id="boq-profit-val">₹0</td><td></td>
+        </tr>
+        <tr class="boq-total-row">
+          <td colspan="5" style="text-align:right">Total BOQ Project Cost</td>
+          <td id="boq-total">₹0</td><td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MATERIAL CALCULATOR TAB
+═══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-matCalc">
+  <div class="section-title" style="margin-bottom:20px">🧱 Material Requirement <span style="color:var(--accent)">Calculator</span></div>
+  <div class="estimator-card">
+    <h4>Site Dimensions</h4>
+    <div class="form-grid">
+      <div class="form-group"><label>Length (m)</label><input type="number" id="mc-l" placeholder="0" oninput="calcMat()"></div>
+      <div class="form-group"><label>Width (m)</label><input type="number" id="mc-w" placeholder="0" oninput="calcMat()"></div>
+      <div class="form-group"><label>Thickness (m)</label><input type="number" id="mc-t" placeholder="0.15" oninput="calcMat()"></div>
+      <div class="form-group"><label>Truck capacity - Sand (CFT)</label><input type="number" id="mc-sand-truck" value="350" oninput="calcMat()"></div>
+      <div class="form-group"><label>Truck capacity - Agg (CFT)</label><input type="number" id="mc-agg-truck" value="350" oninput="calcMat()"></div>
+    </div>
+    <div class="mat-result" id="mc-result" style="display:none">
+      <h5>Material Requirements</h5>
+      <div id="mc-rows"></div>
+    </div>
+  </div>
+</div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════════════ -->
+
+<!-- ADD GOV CONTRACT -->
+<div class="modal-overlay" id="modal-addGovContract">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('addGovContract')">✕</button>
+  <h3>Add Government Contract</h3>
+  <div class="form-grid">
+    <div class="form-group full"><label>Contract Name</label><input id="gc-name" type="text" placeholder="e.g. Road Construction NH-29"></div>
+    <div class="form-group"><label>Client / Authority</label><input id="gc-client" type="text" placeholder="e.g. PWD UP"></div>
+    <div class="form-group"><label>Tender Value (incl. GST) ₹</label><input id="gc-value" type="number" placeholder="0" oninput="previewLAD()"></div>
+    <div class="form-group"><label>Completion Time (months)</label><input id="gc-months" type="number" placeholder="12"></div>
+    <div class="form-group"><label>EMD Deposit ₹</label><input id="gc-emd" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Security Deposit ₹</label><input id="gc-security" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Tender Fees ₹</label><input id="gc-fees" type="number" placeholder="0"></div>
+    <div class="form-group full"><label>Tender Link</label><input id="gc-link" type="url" placeholder="https://etender.up.nic.in/..."></div>
+    <div class="form-group full">
+      <div class="check-row"><input type="checkbox" id="gc-lad" onchange="toggleLADFields()"><label for="gc-lad">LAD Work (Legislative Area Development)</label></div>
+    </div>
+    <div id="gc-lad-fields" style="display:none;grid-column:1/-1">
+      <div class="lad-result">
+        <div style="color:var(--accent);font-weight:600;margin-bottom:10px">LAD Work Calculator</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Commission for Work %</label><input id="lad-comm-work" type="number" value="15" oninput="previewLAD()"></div>
+          <div class="form-group"><label>Commission to Authority %</label><input id="lad-comm-auth" type="number" value="16" oninput="previewLAD()"></div>
+          <div class="form-group"><label>Net Profit % (excl. GST)</label><input id="lad-profit" type="number" value="10" oninput="previewLAD()"></div>
+          <div class="form-group"><label>Expected Expenses ₹</label><input id="lad-expenses" type="number" placeholder="0" oninput="previewLAD()"></div>
+        </div>
+        <div id="lad-preview" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('addGovContract')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveGovContract()">Save Contract</button>
+  </div>
+</div>
+</div>
+
+<!-- ADD PVT CONTRACT -->
+<div class="modal-overlay" id="modal-addPvtContract">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('addPvtContract')">✕</button>
+  <h3>Add Private Contract</h3>
+  <div class="form-grid">
+    <div class="form-group full"><label>Contract Name</label><input id="pc-name" type="text" placeholder="e.g. House Construction – Sharma Residence"></div>
+    <div class="form-group"><label>Client Name</label><input id="pc-client" type="text" placeholder="Client name"></div>
+    <div class="form-group"><label>Contract Value ₹</label><input id="pc-value" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Completion Time (months)</label><input id="pc-months" type="number" placeholder="6"></div>
+    <div class="form-group full"><label>Tender / Reference Link</label><input id="pc-link" type="url" placeholder="https://..."></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('addPvtContract')">Cancel</button>
+    <button class="btn btn-primary" onclick="savePvtContract()">Save Contract</button>
+  </div>
+</div>
+</div>
+
+<!-- CONTRACT DETAIL MODAL -->
+<div class="modal-overlay" id="modal-contractDetail">
+<div class="modal" style="width:750px">
+  <button class="modal-close" onclick="closeModal('contractDetail')">✕</button>
+  <h3 id="cd-title">Contract Details</h3>
+  <div id="cd-info"></div>
+  <hr class="divider">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Expenses -->
+    <div>
+      <div class="section-header" style="margin-bottom:10px">
+        <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text-bright)">Expenses</div>
+        <button class="btn btn-secondary btn-sm" onclick="openAddExpense()">+ Add</button>
+      </div>
+      <div id="cd-expenses"></div>
+      <div style="padding:8px 0;font-family:'Share Tech Mono',monospace;font-size:.88rem">
+        Total: <span id="cd-exp-total" style="color:var(--red)">₹0</span>
+      </div>
+    </div>
+    <!-- Part Payments -->
+    <div>
+      <div class="section-header" style="margin-bottom:10px">
+        <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text-bright)">Part Payments</div>
+        <button class="btn btn-secondary btn-sm" onclick="openAddPayment()">+ Add</button>
+      </div>
+      <div id="cd-payments"></div>
+      <div style="padding:8px 0;font-family:'Share Tech Mono',monospace;font-size:.88rem">
+        Received: <span id="cd-pay-total" style="color:var(--green)">₹0</span>
+      </div>
+    </div>
+  </div>
+  <hr class="divider">
+  <div id="cd-actions" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+</div>
+</div>
+
+<!-- ADD EXPENSE -->
+<div class="modal-overlay" id="modal-addExpense">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('addExpense')">✕</button>
+  <h3>Add Expense</h3>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Category</label>
+      <select id="exp-cat" onchange="updateExpSubCat()">
+        <option value="labour">Labour</option>
+        <option value="materials">Materials</option>
+        <option value="transport">Transport</option>
+        <option value="machinery">Machinery</option>
+        <option value="other">Other Expenses</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Sub-category</label>
+      <select id="exp-subcat"></select>
+    </div>
+    <div class="form-group"><label>Amount ₹</label><input id="exp-amount" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Date</label><input id="exp-date" type="date"></div>
+    <div class="form-group full"><label>Notes</label><textarea id="exp-notes" placeholder="Optional notes..."></textarea></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('addExpense')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+  </div>
+</div>
+</div>
+
+<!-- ADD PART PAYMENT -->
+<div class="modal-overlay" id="modal-addPayment">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('addPayment')">✕</button>
+  <h3>Record Part Payment</h3>
+  <div class="form-grid">
+    <div class="form-group"><label>Amount Received ₹</label><input id="pay-amount" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Date</label><input id="pay-date" type="date"></div>
+    <div class="form-group full"><label>Notes</label><textarea id="pay-notes" placeholder="Payment details..."></textarea></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('addPayment')">Cancel</button>
+    <button class="btn btn-primary" onclick="savePayment()">Save Payment</button>
+  </div>
+</div>
+</div>
+
+<!-- TAX INVOICE -->
+<div class="modal-overlay" id="modal-taxInvoice">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('taxInvoice')">✕</button>
+  <h3>Generate Tax Invoice</h3>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Work Type</label>
+      <select id="inv-worktype"><option value="earthwork">Earthwork</option><option value="general">General Construction</option></select>
+    </div>
+    <div class="form-group">
+      <label>GST Rate %</label>
+      <select id="inv-gst"><option value="12">12%</option><option value="18">18%</option><option value="5">5%</option></select>
+    </div>
+    <div class="form-group"><label>Invoice Value ₹</label><input id="inv-value" type="number" placeholder="0" oninput="calcInvoice()"></div>
+  </div>
+  <div id="inv-result" style="margin-top:16px"></div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('taxInvoice')">Close</button>
+    <button class="btn btn-primary" onclick="printInvoice()">Print Invoice</button>
+  </div>
+</div>
+</div>
+
+<!-- CASH ENTRY -->
+<div class="modal-overlay" id="modal-cashEntry">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('cashEntry')">✕</button>
+  <h3>Cash Entry</h3>
+  <div class="form-grid">
+    <div class="form-group"><label>Type</label>
+      <select id="cash-type"><option value="in">Cash In (+)</option><option value="out">Cash Out (−)</option></select>
+    </div>
+    <div class="form-group"><label>Amount ₹</label><input id="cash-amount" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Date</label><input id="cash-date" type="date"></div>
+    <div class="form-group full"><label>Description</label><input id="cash-desc" type="text" placeholder="e.g. Labour payment"></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('cashEntry')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveCashEntry()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- BANK ENTRY -->
+<div class="modal-overlay" id="modal-bankEntry">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('bankEntry')">✕</button>
+  <h3>Bank Entry</h3>
+  <div class="form-grid">
+    <div class="form-group"><label>Type</label>
+      <select id="bank-type"><option value="in">Credit (+)</option><option value="out">Debit (−)</option></select>
+    </div>
+    <div class="form-group"><label>Amount ₹</label><input id="bank-amount" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Date</label><input id="bank-date" type="date"></div>
+    <div class="form-group full"><label>Description</label><input id="bank-desc" type="text" placeholder="e.g. Contract payment received"></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('bankEntry')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveBankEntry()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- COMMISSION ENTRY -->
+<div class="modal-overlay" id="modal-commEntry">
+<div class="modal">
+  <button class="modal-close" onclick="closeModal('commEntry')">✕</button>
+  <h3>Commission / JV Payment</h3>
+  <div class="form-grid">
+    <div class="form-group"><label>Person / Party</label><input id="comm-person" type="text" placeholder="Name"></div>
+    <div class="form-group"><label>Amount ₹</label><input id="comm-amount" type="number" placeholder="0"></div>
+    <div class="form-group"><label>Contract Related</label><input id="comm-contract" type="text" placeholder="Contract name or N/A"></div>
+    <div class="form-group"><label>Date</label><input id="comm-date" type="date"></div>
+    <div class="form-group full"><label>Purpose</label><input id="comm-purpose" type="text" placeholder="e.g. LAD commission, JV payment"></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('commEntry')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveCommission()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- SYNC STATUS MODAL -->
+<div class="modal-overlay" id="modal-syncStatus">
+<div class="modal" style="width:420px">
+  <button class="modal-close" onclick="closeModal('syncStatus')">✕</button>
+  <h3>Data Sync Status</h3>
+  <div id="sync-detail" style="padding:8px 0"></div>
+  <div class="form-actions" style="margin-top:14px">
+    <button class="btn btn-secondary" onclick="closeModal('syncStatus')">Close</button>
+    <button class="btn btn-primary" id="modal-sync-now" onclick="syncNow()" style="display:none">Sync Now</button>
+  </div>
+</div>
+</div>
+
+<!-- EMD/SECURITY RELEASE MODAL -->
+<div class="modal-overlay" id="modal-releaseDeposit">
+<div class="modal" style="width:400px">
+  <button class="modal-close" onclick="closeModal('releaseDeposit')">✕</button>
+  <h3>Release Deposit</h3>
+  <div class="form-grid">
+    <div class="form-group"><label>Type</label>
+      <select id="rd-type"><option value="emd">EMD</option><option value="security">Security Deposit</option></select>
+    </div>
+    <div class="form-group"><label>Amount ₹</label><input id="rd-amount" type="number" placeholder="0"></div>
+    <div class="form-group full"><label>Notes</label><input id="rd-notes" type="text" placeholder="Reference / remarks"></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="closeModal('releaseDeposit')">Cancel</button>
+    <button class="btn btn-success" onclick="saveDepositRelease()">Release & Add to Cash</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  FIREBASE CONFIG – Replace with your project config
+// ═══════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAK2J1B8KDI4HQKQ3jtd6i5xiRSID5zST0",
+  authDomain: "vni-management.firebaseapp.com",
+  projectId: "vni-management",
+  storageBucket: "vni-management.firebasestorage.app",
+  messagingSenderId: "316037940128",
+  appId: "1:316037940128:web:90d698f6debc8eaa23dac5",
+  measurementId: "G-XN9TS90LFH"
+};
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let db = null, auth = null, firebaseOK = false, currentUser = null;
+let currentContractId = null, currentContractType = null;
+let govContractFilter = 'allotted', pvtContractFilter = 'allotted';
+
+// Local data store
+let DATA = {
+  govContracts: [],
+  pvtContracts: [],
+  cashEntries: [],
+  bankEntries: [],
+  commissions: [],
+  boqRows: []
+};
+
+// ═══════════════════════════════════════════════════════════
+//  FIREBASE INIT
+// ═══════════════════════════════════════════════════════════
+function initFirebase() {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        showApp();
+      } else {
+        showLogin();
+      }
+    });
+    // Test connection
+    db.collection('_ping').doc('ping').get().then(() => {
+      firebaseOK = true;
+      setSyncStatus('synced');
+    }).catch(() => {
+      firebaseOK = false;
+      setSyncStatus('offline');
+    });
+  } catch(e) {
+    firebaseOK = false;
+    setSyncStatus('offline');
+    console.warn('Firebase init failed, using localStorage:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'Please enter email and password.'; return; }
+  if (!auth) {
+    // Fallback: demo login
+    currentUser = { email };
+    loadLocalData();
+    showApp();
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(() => {})
+    .catch(e => { err.textContent = e.message; });
+}
+function doLogout() {
+  if (auth) auth.signOut();
+  else showLogin();
+}
+function showLogin() {
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  loadData();
+  renderTenderInputs();
+  setPvtEst('column', document.querySelector('#pvtEstTabs .inner-tab'));
+  setTimeout(renderDashboard, 500);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SYNC STATUS
+// ═══════════════════════════════════════════════════════════
+function setSyncStatus(state) {
+  const badge = document.getElementById('syncBadge');
+  const text = document.getElementById('syncText');
+  const btnSync = document.getElementById('btnSyncNow');
+  badge.className = 'sync-badge';
+  if (state === 'synced') { text.textContent = 'Firebase Synced'; btnSync.style.display = 'none'; }
+  else if (state === 'offline') { badge.className = 'sync-badge offline'; text.textContent = 'Local Mode (Offline)'; btnSync.style.display = 'block'; }
+  else { badge.className = 'sync-badge syncing'; text.textContent = 'Syncing Data…'; btnSync.style.display = 'none'; }
+}
+function checkSyncStatus() {
+  if (!db) { openSyncModal('No Firebase connection. Data stored in localStorage.', false); return; }
+  db.collection('_ping').doc('ping').set({ t: Date.now() })
+    .then(() => { firebaseOK = true; setSyncStatus('synced'); openSyncModal('✅ Firebase connected. Data is synced to cloud.', false); })
+    .catch(() => { firebaseOK = false; setSyncStatus('offline'); openSyncModal('⚠️ Firebase offline. Data stored in localStorage only.', true); });
+}
+function openSyncModal(msg, showBtn) {
+  document.getElementById('sync-detail').innerHTML = `<div class="info-box">${msg}</div>`;
+  document.getElementById('modal-sync-now').style.display = showBtn ? 'block' : 'none';
+  openModal('syncStatus');
+}
+function syncNow() {
+  if (!db || !firebaseOK) { notify('Firebase not available', 'error'); return; }
+  setSyncStatus('syncing');
+  saveAllToFirebase().then(() => { setSyncStatus('synced'); notify('Data synced to Firebase!', 'success'); closeModal('syncStatus'); });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DATA PERSISTENCE
+// ═══════════════════════════════════════════════════════════
+const LS_KEY = 'vni_data';
+function loadLocalData() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) DATA = { ...DATA, ...JSON.parse(saved) };
+  } catch(e) {}
+}
+function saveLocal() {
+  localStorage.setItem(LS_KEY, JSON.stringify(DATA));
+}
+
+async function loadData() {
+  loadLocalData();
+  if (db && firebaseOK && currentUser) {
+    try {
+      const doc = await db.collection('vni').doc(currentUser.uid).get();
+      if (doc.exists) { DATA = { ...DATA, ...doc.data() }; }
+    } catch(e) { console.warn('Firestore load failed:', e); }
+  }
+  renderAll();
+}
+function saveData() {
+  saveLocal();
+  if (db && firebaseOK && currentUser) {
+    db.collection('vni').doc(currentUser.uid).set(DATA, { merge: true }).catch(e => {
+      firebaseOK = false;
+      setSyncStatus('offline');
+    });
+  }
+}
+async function saveAllToFirebase() {
+  if (!db || !currentUser) return;
+  await db.collection('vni').doc(currentUser.uid).set(DATA);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════
+const TAB_TITLES = {
+  dashboard:'Dashboard', govContracts:'Government Contracts', pvtContracts:'Private Contracts',
+  finance:'Finance', wealth:'Wealth', tenderEst:'Tender Estimator',
+  pvtEst:'Private Estimator', boq:'BOQ Generator', matCalc:'Material Calculator'
+};
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pane = document.getElementById('tab-' + id);
+  if (pane) pane.classList.add('active');
+  const navs = document.querySelectorAll('.nav-item');
+  navs.forEach(n => { if (n.textContent.trim().toLowerCase().includes(TAB_TITLES[id]?.toLowerCase().split(' ')[0])) n.classList.add('active'); });
+  document.getElementById('pageTitle').textContent = TAB_TITLES[id] || id;
+  closeSidebar();
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'finance') renderFinance();
+  if (id === 'wealth') renderWealth();
+  if (id === 'govContracts') renderContracts('gov');
+  if (id === 'pvtContracts') renderContracts('pvt');
+  if (id === 'boq') { if (!DATA.boqRows.length) addBOQRow(); renderBOQ(); }
+}
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlayBack').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlayBack').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById('modal-' + id).classList.add('open'); }
+function closeModal(id) { document.getElementById('modal-' + id).classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════════
+//  NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════
+function notify(msg, type='success') {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.className = 'notif show ' + type;
+  setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FORMATTING
+// ═══════════════════════════════════════════════════════════
+function fmt(n) { return '₹' + (n||0).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function today() { return new Date().toISOString().split('T')[0]; }
+
+// ═══════════════════════════════════════════════════════════
+//  GOVERNMENT CONTRACTS
+// ═══════════════════════════════════════════════════════════
+function saveGovContract() {
+  const name = document.getElementById('gc-name').value.trim();
+  const client = document.getElementById('gc-client').value.trim();
+  const value = parseFloat(document.getElementById('gc-value').value)||0;
+  const months = parseInt(document.getElementById('gc-months').value)||12;
+  const emd = parseFloat(document.getElementById('gc-emd').value)||0;
+  const security = parseFloat(document.getElementById('gc-security').value)||0;
+  const fees = parseFloat(document.getElementById('gc-fees').value)||0;
+  const link = document.getElementById('gc-link').value.trim();
+  const lad = document.getElementById('gc-lad').checked;
+  if (!name || !value) { notify('Contract name and value required', 'error'); return; }
+  const contract = {
+    id: uid(), type: 'gov', name, client, value, months, emd, security, fees, link, lad,
+    status: 'allotted', createdAt: today(), expenses: [], payments: [], deposits: []
+  };
+  if (lad) {
+    contract.ladCommWork = parseFloat(document.getElementById('lad-comm-work').value)||15;
+    contract.ladCommAuth = parseFloat(document.getElementById('lad-comm-auth').value)||16;
+    contract.ladProfit = parseFloat(document.getElementById('lad-profit').value)||10;
+    contract.ladExpenses = parseFloat(document.getElementById('lad-expenses').value)||0;
+  }
+  // Deduct EMD + Security + Fees from cash
+  const deduction = emd + security + fees;
+  if (deduction > 0) {
+    DATA.cashEntries.push({ id: uid(), type: 'out', amount: deduction, date: today(), desc: `EMD+Security+Fees for ${name}` });
+  }
+  DATA.govContracts.push(contract);
+  saveData();
+  closeModal('addGovContract');
+  clearGovForm();
+  renderContracts('gov');
+  renderDashboard();
+  notify('Government contract saved!');
+}
+function clearGovForm() {
+  ['gc-name','gc-client','gc-value','gc-months','gc-emd','gc-security','gc-fees','gc-link']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('gc-lad').checked = false;
+  document.getElementById('gc-lad-fields').style.display = 'none';
+}
+function toggleLADFields() {
+  const show = document.getElementById('gc-lad').checked;
+  document.getElementById('gc-lad-fields').style.display = show ? 'block' : 'none';
+  if (show) previewLAD();
+}
+function previewLAD() {
+  const value = parseFloat(document.getElementById('gc-value').value)||0;
+  if (!value) return;
+  const cw = parseFloat(document.getElementById('lad-comm-work').value)||15;
+  const ca = parseFloat(document.getElementById('lad-comm-auth').value)||16;
+  const np = parseFloat(document.getElementById('lad-profit').value)||10;
+  const exp = parseFloat(document.getElementById('lad-expenses').value)||0;
+  const commWork = value * cw / 100;
+  const commAuth = value * ca / 100;
+  const totalComm = commWork + commAuth;
+  const tds = value * 0.02;
+  const gst = value - (value / 1.12); // assume 12% GST
+  const netProfit = value * np / 100;
+  const expectedProfit = value - totalComm - tds - exp;
+  const profitPct = (expectedProfit / value * 100).toFixed(1);
+  document.getElementById('lad-preview').innerHTML = `
+    <div style="font-size:.82rem">
+      <div class="result-row"><span class="result-label">Commission (Work ${cw}%)</span><span class="result-value">${fmt(commWork)}</span></div>
+      <div class="result-row"><span class="result-label">Commission (Authority ${ca}%)</span><span class="result-value">${fmt(commAuth)}</span></div>
+      <div class="result-row"><span class="result-label">TDS (2%)</span><span class="result-value">${fmt(tds)}</span></div>
+      <div class="result-row"><span class="result-label">Expected Expenses</span><span class="result-value">${fmt(exp)}</span></div>
+      <div class="result-row"><span class="result-label">Expected Profit</span><span class="result-value" style="color:var(--green)">${fmt(expectedProfit)} (${profitPct}%)</span></div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PRIVATE CONTRACTS
+// ═══════════════════════════════════════════════════════════
+function savePvtContract() {
+  const name = document.getElementById('pc-name').value.trim();
+  const client = document.getElementById('pc-client').value.trim();
+  const value = parseFloat(document.getElementById('pc-value').value)||0;
+  const months = parseInt(document.getElementById('pc-months').value)||6;
+  const link = document.getElementById('pc-link').value.trim();
+  if (!name || !value) { notify('Contract name and value required', 'error'); return; }
+  DATA.pvtContracts.push({ id: uid(), type: 'pvt', name, client, value, months, link,
+    status: 'allotted', createdAt: today(), expenses: [], payments: [] });
+  saveData();
+  closeModal('addPvtContract');
+  ['pc-name','pc-client','pc-value','pc-months','pc-link'].forEach(id => document.getElementById(id).value = '');
+  renderContracts('pvt');
+  renderDashboard();
+  notify('Private contract saved!');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER CONTRACTS
+// ═══════════════════════════════════════════════════════════
+function filterContracts(type, status, el) {
+  if (type === 'gov') govContractFilter = status;
+  else pvtContractFilter = status;
+  el.closest('.inner-tabs').querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderContracts(type);
+}
+function renderContracts(type) {
+  const filter = type === 'gov' ? govContractFilter : pvtContractFilter;
+  const contracts = type === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const tbodyId = type === 'gov' ? 'govContractsTbl' : 'pvtContractsTbl';
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const list = filter === 'all' ? contracts : contracts.filter(c => c.status === filter);
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:28px">
+      No contracts found. Click "+ Add Contract" to get started.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(c => {
+    const statusBadge = `<span class="badge badge-${c.status}">${c.status === 'construction' ? 'Under Construction' : c.status.charAt(0).toUpperCase()+c.status.slice(1)}</span>`;
+    const actions = buildContractActions(c, type);
+    if (type === 'gov') {
+      return `<tr>
+        <td><strong>${c.name}</strong><br><small style="color:var(--text-dim)">${c.createdAt||''}</small></td>
+        <td>${c.client||'—'}</td>
+        <td>${fmt(c.value)}</td>
+        <td>${c.emd ? fmt(c.emd) : '—'}</td>
+        <td>${c.security ? fmt(c.security) : '—'}</td>
+        <td>${statusBadge}</td>
+        <td>${c.lad ? '<span style="color:var(--accent)">✓ LAD</span>' : '—'}</td>
+        <td>${actions}</td>
+      </tr>`;
+    } else {
+      return `<tr>
+        <td><strong>${c.name}</strong><br><small style="color:var(--text-dim)">${c.createdAt||''}</small></td>
+        <td>${c.client||'—'}</td>
+        <td>${fmt(c.value)}</td>
+        <td>${statusBadge}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }
+  }).join('');
+}
+function buildContractActions(c, type) {
+  let btns = `<button class="btn btn-secondary btn-xs" onclick='viewContract("${c.id}","${type}")'>View</button> `;
+  if (c.status === 'allotted') btns += `<button class="btn btn-success btn-xs" onclick='startWork("${c.id}","${type}")'>Start Work</button> `;
+  if (c.status === 'construction') btns += `<button class="btn btn-primary btn-xs" onclick='markCompleted("${c.id}","${type}")'>Mark Completed</button> `;
+  if (c.status === 'completed') btns += `<button class="btn btn-secondary btn-xs" onclick='openTaxInvoice("${c.id}","${type}")'>Tax Invoice</button> `;
+  if (type === 'gov' && c.emd) btns += `<button class="btn btn-secondary btn-xs" onclick='openReleaseDeposit("${c.id}")'>Release</button> `;
+  btns += `<button class="btn btn-danger btn-xs" onclick='deleteContract("${c.id}","${type}")'>✕</button>`;
+  return btns;
+}
+function startWork(id, type) {
+  const arr = type === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === id);
+  if (c) { c.status = 'construction'; c.startedAt = today(); saveData(); renderContracts(type); renderDashboard(); notify('Contract moved to Under Construction'); }
+}
+function markCompleted(id, type) {
+  const arr = type === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === id);
+  if (c) { c.status = 'completed'; c.completedAt = today(); saveData(); renderContracts(type); renderDashboard(); notify('Contract marked as Completed!', 'success'); }
+}
+function deleteContract(id, type) {
+  if (!confirm('Delete this contract? This cannot be undone.')) return;
+  if (type === 'gov') DATA.govContracts = DATA.govContracts.filter(x => x.id !== id);
+  else DATA.pvtContracts = DATA.pvtContracts.filter(x => x.id !== id);
+  saveData(); renderContracts(type); renderDashboard(); notify('Contract deleted');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTRACT DETAIL VIEW
+// ═══════════════════════════════════════════════════════════
+function viewContract(id, type) {
+  currentContractId = id;
+  currentContractType = type;
+  const arr = type === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('cd-title').textContent = c.name;
+  const totalExp = (c.expenses||[]).reduce((s,e) => s+e.amount, 0);
+  const totalPay = (c.payments||[]).reduce((s,p) => s+p.amount, 0);
+  const receivable = c.value - totalPay;
+  document.getElementById('cd-info').innerHTML = `
+    <div class="form-grid" style="margin-bottom:8px">
+      <div><span style="color:var(--text-dim);font-size:.78rem">CLIENT</span><br>${c.client||'—'}</div>
+      <div><span style="color:var(--text-dim);font-size:.78rem">TENDER VALUE</span><br><strong style="color:var(--accent)">${fmt(c.value)}</strong></div>
+      <div><span style="color:var(--text-dim);font-size:.78rem">STATUS</span><br><span class="badge badge-${c.status}">${c.status}</span></div>
+      <div><span style="color:var(--text-dim);font-size:.78rem">MONTHS</span><br>${c.months||'—'}</div>
+      ${type==='gov'?`<div><span style="color:var(--text-dim);font-size:.78rem">EMD</span><br>${fmt(c.emd)}</div><div><span style="color:var(--text-dim);font-size:.78rem">SECURITY</span><br>${fmt(c.security)}</div>`:''}
+      <div><span style="color:var(--text-dim);font-size:.78rem">TOTAL EXPENSES</span><br><span style="color:var(--red)">${fmt(totalExp)}</span></div>
+      <div><span style="color:var(--text-dim);font-size:.78rem">RECEIVED</span><br><span style="color:var(--green)">${fmt(totalPay)}</span></div>
+      <div><span style="color:var(--text-dim);font-size:.78rem">RECEIVABLE</span><br><span style="color:var(--accent)">${fmt(receivable)}</span></div>
+    </div>
+    ${c.link?`<a href="${c.link}" target="_blank" style="color:var(--blue);font-size:.82rem">🔗 View Tender</a>`:''}
+  `;
+  // Expenses
+  const expDiv = document.getElementById('cd-expenses');
+  const exps = c.expenses||[];
+  expDiv.innerHTML = exps.length ? exps.map(e => `
+    <div class="exp-item">
+      <div><div style="font-size:.82rem">${e.subcat||e.cat}</div><div class="payment-date">${e.date||''}</div>${e.notes?`<div style="color:var(--text-dim);font-size:.75rem">${e.notes}</div>`:''}</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:'Share Tech Mono',monospace;color:var(--red)">${fmt(e.amount)}</span>
+        <button class="btn btn-danger btn-xs" onclick='delExpense("${e.id}")'>✕</button>
+      </div>
+    </div>`).join('') : '<div style="color:var(--text-dim);font-size:.82rem;padding:8px 0">No expenses recorded</div>';
+  document.getElementById('cd-exp-total').textContent = fmt(totalExp);
+  // Payments
+  const payDiv = document.getElementById('cd-payments');
+  const pays = c.payments||[];
+  payDiv.innerHTML = pays.length ? pays.map(p => `
+    <div class="payment-item">
+      <div><div>${p.notes||'Payment'}</div><div class="payment-date">${p.date||''}</div></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:'Share Tech Mono',monospace;color:var(--green)">${fmt(p.amount)}</span>
+        <button class="btn btn-danger btn-xs" onclick='delPayment("${p.id}")'>✕</button>
+      </div>
+    </div>`).join('') : '<div style="color:var(--text-dim);font-size:.82rem;padding:8px 0">No payments recorded</div>';
+  document.getElementById('cd-pay-total').textContent = fmt(totalPay);
+  // Actions
+  let actions = '';
+  if (c.status === 'allotted') actions += `<button class="btn btn-success" onclick='startWork("${c.id}","${type}");closeModal("contractDetail")'>▶ Start Work</button>`;
+  if (c.status === 'construction') actions += `<button class="btn btn-primary" onclick='markCompleted("${c.id}","${type}");closeModal("contractDetail")'>✓ Mark Completed</button>`;
+  if (c.status === 'completed') actions += `<button class="btn btn-secondary" onclick='openTaxInvoice("${c.id}","${type}")'>📄 Tax Invoice</button>`;
+  if (type==='gov') actions += `<button class="btn btn-secondary" onclick='openReleaseDeposit("${c.id}")'>💰 Release Deposit</button>`;
+  document.getElementById('cd-actions').innerHTML = actions;
+  openModal('contractDetail');
+}
+function openAddExpense() {
+  updateExpSubCat();
+  document.getElementById('exp-date').value = today();
+  openModal('addExpense');
+}
+function openAddPayment() {
+  document.getElementById('pay-date').value = today();
+  openModal('addPayment');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPENSES
+// ═══════════════════════════════════════════════════════════
+const EXP_SUBCATS = {
+  labour: ['Labour Wages','Supervisor Wages'],
+  materials: ['Bricks','Cement','Sand','Aggregate','Steel','Other Materials'],
+  transport: ['Transport'],
+  machinery: ['Machinery Hire','Machinery Repair'],
+  other: ['Site Overhead','Legal/Admin','Miscellaneous']
+};
+function updateExpSubCat() {
+  const cat = document.getElementById('exp-cat').value;
+  const sub = document.getElementById('exp-subcat');
+  sub.innerHTML = (EXP_SUBCATS[cat]||['Other']).map(s => `<option>${s}</option>`).join('');
+}
+function saveExpense() {
+  const amount = parseFloat(document.getElementById('exp-amount').value)||0;
+  if (!amount) { notify('Amount required', 'error'); return; }
+  const exp = {
+    id: uid(),
+    cat: document.getElementById('exp-cat').value,
+    subcat: document.getElementById('exp-subcat').value,
+    amount,
+    date: document.getElementById('exp-date').value,
+    notes: document.getElementById('exp-notes').value
+  };
+  const arr = currentContractType === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === currentContractId);
+  if (c) {
+    if (!c.expenses) c.expenses = [];
+    c.expenses.push(exp);
+    saveData();
+    viewContract(currentContractId, currentContractType);
+    closeModal('addExpense');
+    renderDashboard();
+    notify('Expense saved!');
+  }
+}
+function delExpense(eid) {
+  const arr = currentContractType === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === currentContractId);
+  if (c) { c.expenses = (c.expenses||[]).filter(e => e.id !== eid); saveData(); viewContract(currentContractId, currentContractType); renderDashboard(); }
+}
+function savePayment() {
+  const amount = parseFloat(document.getElementById('pay-amount').value)||0;
+  if (!amount) { notify('Amount required', 'error'); return; }
+  const pay = {
+    id: uid(),
+    amount,
+    date: document.getElementById('pay-date').value,
+    notes: document.getElementById('pay-notes').value
+  };
+  const arr = currentContractType === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === currentContractId);
+  if (c) {
+    if (!c.payments) c.payments = [];
+    c.payments.push(pay);
+    saveData();
+    viewContract(currentContractId, currentContractType);
+    closeModal('addPayment');
+    renderDashboard();
+    notify('Payment recorded!');
+  }
+}
+function delPayment(pid) {
+  const arr = currentContractType === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === currentContractId);
+  if (c) { c.payments = (c.payments||[]).filter(p => p.id !== pid); saveData(); viewContract(currentContractId, currentContractType); renderDashboard(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DEPOSIT RELEASE
+// ═══════════════════════════════════════════════════════════
+function openReleaseDeposit(cid) {
+  currentContractId = cid;
+  document.getElementById('rd-amount').value = '';
+  document.getElementById('rd-notes').value = '';
+  openModal('releaseDeposit');
+}
+function saveDepositRelease() {
+  const amount = parseFloat(document.getElementById('rd-amount').value)||0;
+  const type = document.getElementById('rd-type').value;
+  const notes = document.getElementById('rd-notes').value;
+  if (!amount) { notify('Amount required', 'error'); return; }
+  DATA.cashEntries.push({ id: uid(), type: 'in', amount, date: today(), desc: `${type.toUpperCase()} Released: ${notes}` });
+  saveData(); closeModal('releaseDeposit'); renderFinance(); renderDashboard(); notify(`${type.toUpperCase()} of ${fmt(amount)} added to cash`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAX INVOICE
+// ═══════════════════════════════════════════════════════════
+function openTaxInvoice(id, type) {
+  const arr = type === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === id);
+  if (c) document.getElementById('inv-value').value = c.value;
+  calcInvoice();
+  openModal('taxInvoice');
+}
+function calcInvoice() {
+  const total = parseFloat(document.getElementById('inv-value').value)||0;
+  const gstRate = parseFloat(document.getElementById('inv-gst').value)||12;
+  const workType = document.getElementById('inv-worktype').value;
+  const baseValue = total / (1 + gstRate/100);
+  const gstAmt = total - baseValue;
+  const tds = baseValue * 0.02;
+  const netPayable = total - tds;
+  document.getElementById('inv-result').innerHTML = `
+    <div class="fin-card">
+      <div class="fin-card-header">Tax Invoice Summary — ${workType === 'earthwork' ? 'Earthwork' : 'General Construction'}</div>
+      <div class="fin-row"><span class="fin-label">Gross Invoice Value</span><span class="fin-val">${fmt(total)}</span></div>
+      <div class="fin-row"><span class="fin-label">Base Value (excl. GST)</span><span class="fin-val">${fmt(baseValue)}</span></div>
+      <div class="fin-row"><span class="fin-label">GST @${gstRate}%</span><span class="fin-val">${fmt(gstAmt)}</span></div>
+      <div class="fin-row"><span class="fin-label">TDS @2%</span><span class="fin-val red">${fmt(tds)}</span></div>
+      <div class="fin-row" style="background:rgba(34,214,122,.06)"><span class="fin-label" style="font-weight:600">Net Payable</span><span class="fin-val green" style="font-size:1.05rem">${fmt(netPayable)}</span></div>
+    </div>`;
+}
+function printInvoice() {
+  const content = document.getElementById('inv-result').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>VNI Tax Invoice</title>
+    <style>body{font-family:sans-serif;padding:24px;max-width:600px;margin:auto}
+    .fin-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+    .fin-card-header{background:#f0a500;color:#000;padding:10px 16px;font-weight:700;border-radius:6px 6px 0 0}
+    .fin-card{border:1px solid #ddd;border-radius:6px;overflow:hidden}
+    .fin-label{color:#666}.fin-val{font-weight:600}
+    h2{color:#333}</style></head><body>
+    <h2>Vinayam Nirmanam Infra</h2>
+    <p>VNI Bhawan, Rapti Nagar, Gorakhpur UP-273003 | +91 8851965533</p>
+    <hr>${content}
+    <p style="margin-top:20px;color:#999;font-size:.85rem">Generated: ${new Date().toLocaleDateString('en-IN')}</p>
+    </body></html>`);
+  win.print();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FINANCE
+// ═══════════════════════════════════════════════════════════
+function saveCashEntry() {
+  const amount = parseFloat(document.getElementById('cash-amount').value)||0;
+  if (!amount) { notify('Amount required', 'error'); return; }
+  DATA.cashEntries.push({ id: uid(), type: document.getElementById('cash-type').value, amount, date: document.getElementById('cash-date').value, desc: document.getElementById('cash-desc').value });
+  saveData(); closeModal('cashEntry'); renderFinance(); renderDashboard(); notify('Cash entry saved!');
+}
+function saveBankEntry() {
+  const amount = parseFloat(document.getElementById('bank-amount').value)||0;
+  if (!amount) { notify('Amount required', 'error'); return; }
+  DATA.bankEntries.push({ id: uid(), type: document.getElementById('bank-type').value, amount, date: document.getElementById('bank-date').value, desc: document.getElementById('bank-desc').value });
+  saveData(); closeModal('bankEntry'); renderFinance(); renderDashboard(); notify('Bank entry saved!');
+}
+function saveCommission() {
+  const amount = parseFloat(document.getElementById('comm-amount').value)||0;
+  if (!amount) { notify('Amount required', 'error'); return; }
+  DATA.commissions.push({ id: uid(), person: document.getElementById('comm-person').value, amount, contract: document.getElementById('comm-contract').value, date: document.getElementById('comm-date').value, purpose: document.getElementById('comm-purpose').value });
+  saveData(); closeModal('commEntry'); renderFinance(); notify('Commission recorded!');
+}
+
+function calcFinancials() {
+  const allContracts = [...DATA.govContracts, ...DATA.pvtContracts];
+  const cashIn = DATA.cashEntries.filter(e => e.type==='in').reduce((s,e) => s+e.amount, 0);
+  const cashOut = DATA.cashEntries.filter(e => e.type==='out').reduce((s,e) => s+e.amount, 0);
+  const bankIn = DATA.bankEntries.filter(e => e.type==='in').reduce((s,e) => s+e.amount, 0);
+  const bankOut = DATA.bankEntries.filter(e => e.type==='out').reduce((s,e) => s+e.amount, 0);
+  const totalCommission = DATA.commissions.reduce((s,c) => s+c.amount, 0);
+  const completedContracts = allContracts.filter(c => c.status==='completed');
+  const ongoingContracts = allContracts.filter(c => c.status==='construction');
+  const completedValue = completedContracts.reduce((s,c) => s+c.value, 0);
+  const ongoingValue = ongoingContracts.reduce((s,c) => s+c.value, 0);
+  const totalExpenses = allContracts.reduce((s,c) => s+(c.expenses||[]).reduce((ss,e) => ss+e.amount, 0), 0);
+  const totalReceived = allContracts.reduce((s,c) => s+(c.payments||[]).reduce((ss,p) => ss+p.amount, 0), 0);
+  const totalReceivable = allContracts.filter(c => c.status !== 'allotted').reduce((s,c) => {
+    const paid = (c.payments||[]).reduce((ss,p) => ss+p.amount, 0);
+    return s + (c.value - paid);
+  }, 0);
+  // EMD/Security receivable from gov contracts
+  const govDepositsReceivable = DATA.govContracts.reduce((s,c) => s+(c.emd||0)+(c.security||0), 0);
+  const totalEMDReleased = DATA.cashEntries.filter(e => e.desc&&e.desc.startsWith('EMD') || e.desc&&e.desc.startsWith('emd')).reduce((s,e) => e.type==='in'?s+e.amount:s-e.amount, 0);
+  const cash = cashIn - cashOut;
+  const bank = bankIn - bankOut;
+  const grossProfit = completedValue + totalReceived - totalExpenses;
+  const netProfit = grossProfit - totalCommission;
+  return { cash, bank, totalExpenses, totalReceivable, totalCommission, grossProfit, netProfit, completedValue, ongoingValue, completedContracts, ongoingContracts, allContracts, totalReceived };
+}
+
+function renderFinance() {
+  const F = calcFinancials();
+  document.getElementById('fin-cash').textContent = fmt(F.cash);
+  document.getElementById('fin-bank').textContent = fmt(F.bank);
+  document.getElementById('fin-expenses').textContent = fmt(F.totalExpenses);
+  document.getElementById('fin-receivable').textContent = fmt(F.totalReceivable);
+  document.getElementById('fin-commission').textContent = fmt(F.totalCommission);
+  document.getElementById('fin-gross').textContent = fmt(F.grossProfit);
+  document.getElementById('fin-net').textContent = fmt(F.netProfit);
+  // Commission list
+  const cl = document.getElementById('commList');
+  cl.innerHTML = DATA.commissions.length ? DATA.commissions.map(c => `
+    <div class="comm-item" style="padding:10px 16px">
+      <div>
+        <div style="font-weight:600">${c.person||'—'}</div>
+        <div style="font-size:.77rem;color:var(--text-dim)">${c.purpose||''} | ${c.contract||''} | ${c.date||''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:'Share Tech Mono',monospace;color:var(--red)">${fmt(c.amount)}</span>
+        <button class="btn btn-danger btn-xs" onclick='delCommission("${c.id}")'>✕</button>
+      </div>
+    </div>`).join('') : '<div style="padding:16px;color:var(--text-dim);font-size:.85rem">No commissions recorded</div>';
+}
+function delCommission(id) {
+  DATA.commissions = DATA.commissions.filter(c => c.id !== id);
+  saveData(); renderFinance(); notify('Commission deleted');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WEALTH
+// ═══════════════════════════════════════════════════════════
+function renderWealth() {
+  const F = calcFinancials();
+  document.getElementById('w-cash').textContent = fmt(F.cash);
+  document.getElementById('w-bank').textContent = fmt(F.bank);
+  document.getElementById('w-completed').textContent = fmt(F.completedValue);
+  document.getElementById('w-ongoing').textContent = fmt(F.ongoingValue);
+  document.getElementById('w-comm').textContent = fmt(F.totalCommission);
+  document.getElementById('w-gross').textContent = fmt(F.grossProfit);
+  document.getElementById('w-net').textContent = fmt(F.netProfit);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+let charts = {};
+function renderDashboard() {
+  const F = calcFinancials();
+  document.getElementById('dc-completed').textContent = fmt(F.completedValue);
+  document.getElementById('dc-ongoing').textContent = fmt(F.ongoingValue);
+  document.getElementById('dc-ongoing-count').textContent = F.ongoingContracts.length;
+  document.getElementById('dc-receivable').textContent = fmt(F.totalReceivable);
+  document.getElementById('dc-cash').textContent = fmt(F.cash);
+  document.getElementById('dc-profit').textContent = fmt(F.netProfit);
+  const firmValue = (F.completedValue + F.ongoingValue) * 2;
+  document.getElementById('dc-firmvalue').textContent = fmt(firmValue);
+  renderCharts(F);
+}
+function renderCharts(F) {
+  // Status pie
+  const allotted = DATA.govContracts.concat(DATA.pvtContracts).filter(c=>c.status==='allotted').length;
+  const construct = DATA.govContracts.concat(DATA.pvtContracts).filter(c=>c.status==='construction').length;
+  const completed = DATA.govContracts.concat(DATA.pvtContracts).filter(c=>c.status==='completed').length;
+  if (charts.status) charts.status.destroy();
+  const ctx1 = document.getElementById('chartStatus');
+  if (ctx1) charts.status = new Chart(ctx1, {
+    type:'doughnut',
+    data:{ labels:['Allotted','Under Construction','Completed'], datasets:[{data:[allotted,construct,completed],backgroundColor:['#3a9cf7','#f0a500','#22d67a'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#8a9ab8',font:{size:11}}}}}
+  });
+  // Expense bar
+  const allExp = {};
+  DATA.govContracts.concat(DATA.pvtContracts).forEach(c => (c.expenses||[]).forEach(e => {
+    allExp[e.cat] = (allExp[e.cat]||0) + e.amount;
+  }));
+  if (charts.exp) charts.exp.destroy();
+  const ctx2 = document.getElementById('chartExp');
+  if (ctx2) charts.exp = new Chart(ctx2, {
+    type:'bar',
+    data:{ labels:Object.keys(allExp).map(k=>k.charAt(0).toUpperCase()+k.slice(1)),
+           datasets:[{data:Object.values(allExp),backgroundColor:'rgba(240,165,0,.7)',borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8a9ab8',font:{size:10}}},y:{ticks:{color:'#8a9ab8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}
+  });
+}
+function calcBidCapacity() {
+  const A = parseFloat(document.getElementById('bidA').value)||0;
+  const Nm = parseFloat(document.getElementById('bidN').value)||0;
+  const B = parseFloat(document.getElementById('bidB').value)||0;
+  const N = Nm/12;
+  document.getElementById('bid-a2').textContent = fmt(A*2);
+  document.getElementById('bid-nyears').textContent = N.toFixed(2);
+  document.getElementById('bid-capacity').textContent = fmt((A*N*2)-B);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TENDER ESTIMATOR
+// ═══════════════════════════════════════════════════════════
+const CFT = 35.3147;
+const CEMENT_M3 = 8, SAND_M3 = 15.54, AGG_M3 = 31.07;
+
+function renderTenderInputs() {
+  const type = document.getElementById('te-type').value;
+  const dims = document.getElementById('te-dims');
+  if (type === 'ccroad') {
+    dims.innerHTML = `
+      <div class="form-group"><label>Length (m)</label><input type="number" id="te-l" placeholder="0" oninput="calcTender()"></div>
+      <div class="form-group"><label>Width (m)</label><input type="number" id="te-w" placeholder="0" oninput="calcTender()"></div>
+      <div class="form-group"><label>Thickness (m)</label><input type="number" id="te-t" value="0.15" oninput="calcTender()"></div>`;
+  } else if (type === 'brickwall') {
+    dims.innerHTML = `
+      <div class="form-group"><label>Length (m)</label><input type="number" id="te-l" placeholder="0" oninput="calcTender()"></div>
+      <div class="form-group"><label>Height (m)</label><input type="number" id="te-h" placeholder="0" oninput="calcTender()"></div>
+      <div class="form-group"><label>Thickness (m)</label><input type="number" id="te-t" value="0.23" oninput="calcTender()"></div>
+      <div class="form-group"><label>Brick Price (per piece) ₹</label><input type="number" id="te-brick" value="8" oninput="calcTender()"></div>`;
+  } else if (type === 'culvert') {
+    dims.innerHTML = `
+      <div class="form-group"><label>Length (m)</label><input type="number" id="te-l" placeholder="3" value="3" oninput="calcTender()"></div>
+      <div class="form-group"><label>Width (m)</label><input type="number" id="te-w" placeholder="2" value="2" oninput="calcTender()"></div>
+      <div class="form-group"><label>Wall Height (m)</label><input type="number" id="te-h" placeholder="1" value="1" oninput="calcTender()"></div>
+      <div class="form-group"><label>Slab Thickness (m)</label><input type="number" id="te-t" value="0.2" oninput="calcTender()"></div>`;
+  }
+  calcTender();
+}
+function calcTender() {
+  const type = document.getElementById('te-type').value;
+  const tender = parseFloat(document.getElementById('te-tender').value)||0;
+  const cementP = parseFloat(document.getElementById('te-cement').value)||380;
+  const sandP = parseFloat(document.getElementById('te-sand').value)||35;
+  const aggP = parseFloat(document.getElementById('te-agg').value)||40;
+  const steelP = parseFloat(document.getElementById('te-steel').value)||65;
+  const g = id => { const el = document.getElementById(id); return el ? parseFloat(el.value)||0 : 0; };
+  let results = [];
+  let totalCost = 0;
+  if (type === 'ccroad') {
+    const vol = g('te-l') * g('te-w') * g('te-t');
+    const cement = vol * CEMENT_M3; const sand = vol * SAND_M3; const agg = vol * AGG_M3;
+    const cost = cement*cementP + sand*sandP + agg*aggP;
+    totalCost = cost;
+    results = [
+      {label:'Concrete Volume',val:`${vol.toFixed(2)} m³`},
+      {label:'Cement',val:`${cement.toFixed(0)} bags × ₹${cementP} = ${fmt(cement*cementP)}`},
+      {label:'Sand',val:`${sand.toFixed(1)} CFT × ₹${sandP} = ${fmt(sand*sandP)}`},
+      {label:'Aggregate',val:`${agg.toFixed(1)} CFT × ₹${aggP} = ${fmt(agg*aggP)}`},
+      {label:'Total Material Cost',val:fmt(cost)},
+    ];
+  } else if (type === 'brickwall') {
+    const vol = g('te-l') * g('te-h') * g('te-t');
+    const brickP = g('te-brick')||8;
+    const bricks = vol * 500;
+    const mortarVol = vol * 0.3;
+    const cement = mortarVol * 4; const sand = mortarVol * 0.6 * CFT;
+    const cost = bricks*brickP + cement*cementP + sand*sandP;
+    totalCost = cost;
+    results = [
+      {label:'Wall Volume',val:`${vol.toFixed(2)} m³`},
+      {label:'Bricks',val:`${Math.ceil(bricks)} × ₹${brickP} = ${fmt(bricks*brickP)}`},
+      {label:'Cement',val:`${cement.toFixed(0)} bags × ₹${cementP} = ${fmt(cement*cementP)}`},
+      {label:'Sand',val:`${sand.toFixed(1)} CFT × ₹${sandP} = ${fmt(sand*sandP)}`},
+      {label:'Total Material Cost',val:fmt(cost)},
+    ];
+  } else if (type === 'culvert') {
+    const L=g('te-l'),W=g('te-w'),H=g('te-h'),T=g('te-t');
+    const slabVol = L*W*T; const wallVol = 2*(L*H*0.23) + 2*(W*H*0.23);
+    const totalVol = slabVol + wallVol;
+    const cement = totalVol*CEMENT_M3; const sand = totalVol*SAND_M3; const agg = totalVol*AGG_M3;
+    const cost = cement*cementP + sand*sandP + agg*aggP;
+    totalCost = cost;
+    results = [
+      {label:'Slab Volume',val:`${slabVol.toFixed(2)} m³`},
+      {label:'Wall Volume',val:`${wallVol.toFixed(2)} m³`},
+      {label:'Total Concrete',val:`${totalVol.toFixed(2)} m³`},
+      {label:'Cement',val:`${cement.toFixed(0)} bags × ₹${cementP} = ${fmt(cement*cementP)}`},
+      {label:'Sand',val:`${sand.toFixed(1)} CFT × ₹${sandP} = ${fmt(sand*sandP)}`},
+      {label:'Aggregate',val:`${agg.toFixed(1)} CFT × ₹${aggP} = ${fmt(agg*aggP)}`},
+      {label:'Total Material Cost',val:fmt(cost)},
+    ];
+  }
+  const profit = tender - totalCost;
+  if (totalCost > 0) {
+    results.push({label:`Tender Value`,val:fmt(tender)});
+    results.push({label:`Expected Profit`,val:`${fmt(profit)} (${tender?(profit/tender*100).toFixed(1):0}%)`, highlight: profit>=0 });
+  }
+  const resCard = document.getElementById('te-results');
+  resCard.style.display = totalCost > 0 ? 'block' : 'none';
+  document.getElementById('te-result-rows').innerHTML = results.map((r,i) =>
+    `<div class="result-row ${i===results.length-1?'':''}">
+      <span class="result-label">${r.label}</span>
+      <span class="result-value" ${r.highlight!==undefined?(r.highlight?'style="color:var(--green)"':'style="color:var(--red)"'):''}>${r.val}</span>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PRIVATE ESTIMATOR
+// ═══════════════════════════════════════════════════════════
+let pvtEstType = 'column';
+function setPvtEst(type, el) {
+  pvtEstType = type;
+  el.closest('.inner-tabs').querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPvtDims();
+}
+function renderPvtDims() {
+  const dims = document.getElementById('pe-dims');
+  const maps = {
+    column:`<div class="form-group"><label>No. of Columns</label><input type="number" id="pe-count" value="1" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Length (m)</label><input type="number" id="pe-l" value="0.3" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Width (m)</label><input type="number" id="pe-w" value="0.3" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Height (m)</label><input type="number" id="pe-h" value="3" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Steel kg/m³</label><input type="number" id="pe-steel-ratio" value="100" oninput="calcPvtEst()"></div>`,
+    beam:`<div class="form-group"><label>No. of Beams</label><input type="number" id="pe-count" value="1" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Length (m)</label><input type="number" id="pe-l" value="4" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Width (m)</label><input type="number" id="pe-w" value="0.23" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Depth (m)</label><input type="number" id="pe-h" value="0.35" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Steel kg/m³</label><input type="number" id="pe-steel-ratio" value="80" oninput="calcPvtEst()"></div>`,
+    lintel:`<div class="form-group"><label>No. of Lintels</label><input type="number" id="pe-count" value="1" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Length (m)</label><input type="number" id="pe-l" value="1.2" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Width (m)</label><input type="number" id="pe-w" value="0.23" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Depth (m)</label><input type="number" id="pe-h" value="0.15" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Steel kg/m³</label><input type="number" id="pe-steel-ratio" value="60" oninput="calcPvtEst()"></div>`,
+    brickwall:`<div class="form-group"><label>Length (m)</label><input type="number" id="pe-l" value="5" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Height (m)</label><input type="number" id="pe-h" value="3" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Thickness (m)</label><input type="number" id="pe-t" value="0.23" oninput="calcPvtEst()"></div>`,
+    plaster:`<div class="form-group"><label>Area (m²)</label><input type="number" id="pe-area" value="20" oninput="calcPvtEst()"></div>
+      <div class="form-group"><label>Thickness (mm)</label><input type="number" id="pe-tmm" value="12" oninput="calcPvtEst()"></div>`
+  };
+  dims.innerHTML = maps[pvtEstType]||'';
+  calcPvtEst();
+}
+function calcPvtEst() {
+  const g = id => { const el=document.getElementById(id); return el?parseFloat(el.value)||0:0; };
+  const cP=g('pe-cement'), sP=g('pe-sand'), aP=g('pe-agg'), stP=g('pe-steel'), bP=g('pe-brick');
+  let results=[]; let cost=0;
+  if (pvtEstType==='column'||pvtEstType==='beam'||pvtEstType==='lintel') {
+    const n=g('pe-count')||1, l=g('pe-l'), w=g('pe-w'), h=g('pe-h'), sr=g('pe-steel-ratio')||100;
+    const vol=n*l*w*h;
+    const cement=vol*CEMENT_M3; const sand=vol*SAND_M3; const agg=vol*AGG_M3; const steel=vol*sr;
+    cost=cement*cP+sand*sP+agg*aP+steel*stP;
+    results=[
+      {label:'Total Volume',val:`${vol.toFixed(3)} m³`},
+      {label:'Cement',val:`${cement.toFixed(0)} bags = ${fmt(cement*cP)}`},
+      {label:'Sand',val:`${sand.toFixed(1)} CFT = ${fmt(sand*sP)}`},
+      {label:'Aggregate',val:`${agg.toFixed(1)} CFT = ${fmt(agg*aP)}`},
+      {label:'Steel',val:`${steel.toFixed(1)} kg = ${fmt(steel*stP)}`},
+      {label:'Total Material Cost',val:fmt(cost)},
+    ];
+  } else if (pvtEstType==='brickwall') {
+    const vol=g('pe-l')*g('pe-h')*(g('pe-t')||0.23);
+    const bricks=vol*500; const mortarVol=vol*0.3;
+    const cement=mortarVol*4; const sand=mortarVol*0.6*CFT;
+    cost=bricks*bP+cement*cP+sand*sP;
+    results=[
+      {label:'Wall Volume',val:`${vol.toFixed(2)} m³`},
+      {label:'Bricks',val:`${Math.ceil(bricks)} × ₹${bP} = ${fmt(bricks*bP)}`},
+      {label:'Cement',val:`${cement.toFixed(0)} bags = ${fmt(cement*cP)}`},
+      {label:'Sand',val:`${sand.toFixed(1)} CFT = ${fmt(sand*sP)}`},
+      {label:'Total Material Cost',val:fmt(cost)},
+    ];
+  } else if (pvtEstType==='plaster') {
+    const area=g('pe-area'), t=(g('pe-tmm')||12)/1000;
+    const vol=area*t; const cement=vol*8; const sand=vol*16*CFT;
+    cost=cement*cP+sand*sP;
+    results=[
+      {label:'Plaster Volume',val:`${vol.toFixed(3)} m³`},
+      {label:'Cement',val:`${cement.toFixed(0)} bags = ${fmt(cement*cP)}`},
+      {label:'Sand',val:`${sand.toFixed(1)} CFT = ${fmt(sand*sP)}`},
+      {label:'Total Material Cost',val:fmt(cost)},
+    ];
+  }
+  const res=document.getElementById('pe-results');
+  res.style.display=cost>0?'block':'none';
+  document.getElementById('pe-result-rows').innerHTML=results.map(r =>
+    `<div class="result-row"><span class="result-label">${r.label}</span><span class="result-value">${r.val}</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BOQ GENERATOR
+// ═══════════════════════════════════════════════════════════
+function addBOQRow() {
+  DATA.boqRows.push({ id: uid(), desc:'', unit:'', qty:0, rate:0 });
+  renderBOQ();
+}
+function renderBOQ() {
+  const tbody = document.getElementById('boqBody');
+  tbody.innerHTML = DATA.boqRows.map((row,i) => `
+    <tr id="boq-row-${row.id}">
+      <td style="color:var(--text-dim)">${i+1}</td>
+      <td><input value="${row.desc}" onchange="updateBOQRow('${row.id}','desc',this.value)" placeholder="Description"></td>
+      <td><input value="${row.unit}" onchange="updateBOQRow('${row.id}','unit',this.value)" placeholder="m³"></td>
+      <td><input type="number" value="${row.qty||''}" onchange="updateBOQRow('${row.id}','qty',this.value)" placeholder="0" oninput="updateBOQRow('${row.id}','qty',this.value)"></td>
+      <td><input type="number" value="${row.rate||''}" onchange="updateBOQRow('${row.id}','rate',this.value)" placeholder="0" oninput="updateBOQRow('${row.id}','rate',this.value)"></td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--accent)">${fmt(row.qty*row.rate)}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="delBOQRow('${row.id}')">✕</button></td>
+    </tr>`).join('');
+  calcBOQ();
+}
+function updateBOQRow(id, field, val) {
+  const row = DATA.boqRows.find(r => r.id===id);
+  if (row) { row[field] = field==='qty'||field==='rate' ? parseFloat(val)||0 : val; }
+  calcBOQ();
+}
+function delBOQRow(id) {
+  DATA.boqRows = DATA.boqRows.filter(r => r.id!==id);
+  renderBOQ();
+}
+function calcBOQ() {
+  const subtotal = DATA.boqRows.reduce((s,r) => s+r.qty*r.rate, 0);
+  const overhead = parseFloat(document.getElementById('boq-overhead').value)||0;
+  const profit = parseFloat(document.getElementById('boq-profit').value)||0;
+  const overheadAmt = subtotal * overhead/100;
+  const profitAmt = (subtotal+overheadAmt) * profit/100;
+  const total = subtotal + overheadAmt + profitAmt;
+  document.getElementById('boq-subtotal').textContent = fmt(subtotal);
+  document.getElementById('boq-overhead-val').textContent = fmt(overheadAmt);
+  document.getElementById('boq-profit-val').textContent = fmt(profitAmt);
+  document.getElementById('boq-total').textContent = fmt(total);
+  // Update row amounts
+  DATA.boqRows.forEach(row => {
+    const cells = document.querySelectorAll(`#boq-row-${row.id} td`);
+    if (cells[5]) cells[5].textContent = fmt(row.qty*row.rate);
+  });
+}
+function exportBOQ() {
+  const header = 'Sr,Description,Unit,Quantity,Rate,Amount\n';
+  const rows = DATA.boqRows.map((r,i) => `${i+1},"${r.desc}",${r.unit},${r.qty},${r.rate},${r.qty*r.rate}`).join('\n');
+  const blob = new Blob([header+rows], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'VNI_BOQ.csv'; a.click();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MATERIAL CALCULATOR
+// ═══════════════════════════════════════════════════════════
+function calcMat() {
+  const l=parseFloat(document.getElementById('mc-l').value)||0;
+  const w=parseFloat(document.getElementById('mc-w').value)||0;
+  const t=parseFloat(document.getElementById('mc-t').value)||0;
+  if (!l||!w||!t) { document.getElementById('mc-result').style.display='none'; return; }
+  const vol=l*w*t;
+  const cement=vol*CEMENT_M3; const sand=vol*SAND_M3; const agg=vol*AGG_M3;
+  const sandTruck=parseFloat(document.getElementById('mc-sand-truck').value)||350;
+  const aggTruck=parseFloat(document.getElementById('mc-agg-truck').value)||350;
+  const sandTrucks=Math.ceil(sand/sandTruck); const aggTrucks=Math.ceil(agg/aggTruck);
+  document.getElementById('mc-result').style.display='block';
+  document.getElementById('mc-rows').innerHTML = `
+    <div class="result-row"><span class="result-label">Concrete Volume</span><span class="result-value">${vol.toFixed(3)} m³</span></div>
+    <div class="result-row"><span class="result-label">Cement Required</span><span class="result-value">${Math.ceil(cement)} bags (50kg)</span></div>
+    <div class="result-row"><span class="result-label">Sand Required</span><span class="result-value">${sand.toFixed(1)} CFT</span></div>
+    <div class="result-row"><span class="result-label">Aggregate Required</span><span class="result-value">${agg.toFixed(1)} CFT</span></div>
+    <div class="result-row"><span class="result-label">Sand Trucks (approx.)</span><span class="result-value" style="color:var(--accent)">${sandTrucks} trucks</span></div>
+    <div class="result-row"><span class="result-label">Aggregate Trucks (approx.)</span><span class="result-value" style="color:var(--accent)">${aggTrucks} trucks</span></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER ALL
+// ═══════════════════════════════════════════════════════════
+function renderAll() {
+  renderDashboard();
+  renderContracts('gov');
+  renderContracts('pvt');
+  renderFinance();
+  renderWealth();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  // Set today's date on all date fields
+  document.querySelectorAll('input[type="date"]').forEach(el => el.value = today());
+  updateExpSubCat();
+  initFirebase();
+  // If Firebase init fails entirely, show login with local mode
+  setTimeout(() => {
+    if (!auth) {
+      setSyncStatus('offline');
+      showLogin();
+    }
+  }, 3000);
+});
+</script>
+</body>
+</html>
