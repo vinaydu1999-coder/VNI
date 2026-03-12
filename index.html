@@ -1146,8 +1146,11 @@ function doLogin() {
 }
 function doLogout() {
   stopAutoSync();
-  if (auth) auth.signOut();
-  else showLogin();
+  if (auth) {
+    auth.signOut().then(() => { window.location.reload(); });
+  } else {
+    window.location.reload();
+  }
 }
 function showLogin() {
   document.getElementById('loginPage').style.display = 'flex';
