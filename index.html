@@ -1045,11 +1045,11 @@ tr:hover td{background:rgba(240,165,0,.04)}
   <div class="form-grid">
     <div class="form-group">
       <label>Work Type</label>
-      <select id="inv-worktype"><option value="earthwork">Earthwork</option><option value="general">General Construction</option></select>
+      <select id="inv-worktype" onchange="calcInvoice()"><option value="earthwork">Earthwork</option><option value="general">General Construction</option></select>
     </div>
     <div class="form-group">
       <label>GST Rate %</label>
-      <select id="inv-gst"><option value="12">12%</option><option value="18">18%</option><option value="5">5%</option></select>
+      <select id="inv-gst" onchange="calcInvoice()"><option value="12">12%</option><option value="18">18%</option><option value="5">5%</option></select>
     </div>
     <div class="form-group"><label>Invoice Value ₹</label><input id="inv-value" type="number" placeholder="0" oninput="calcInvoice()"></div>
   </div>
@@ -1236,6 +1236,7 @@ function doLogin() {
 }
 function doLogout() {
   stopAutoSync();
+  stopIdleWatcher();
   // Force one final sync before logout to ensure nothing is lost
   if (db && currentUser) {
     setSyncStatus('syncing');
@@ -1261,6 +1262,7 @@ function showApp() {
   setSyncStatus('syncing');
   loadData();
   startAutoSync();
+  startIdleWatcher();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2566,8 +2568,35 @@ function calcMat() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  RENDER ALL
+//  IDLE AUTO-LOGOUT (30 minutes)
 // ═══════════════════════════════════════════════════════════
+let idleTimer = null;
+const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+function resetIdleTimer() {
+  if (!currentUser) return;
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    notify('Session expired due to inactivity. Logging out...', 'error');
+    setTimeout(() => doLogout(), 2000);
+  }, IDLE_TIMEOUT);
+}
+
+function startIdleWatcher() {
+  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt =>
+    document.addEventListener(evt, resetIdleTimer, { passive: true })
+  );
+  resetIdleTimer();
+}
+
+function stopIdleWatcher() {
+  clearTimeout(idleTimer);
+  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt =>
+    document.removeEventListener(evt, resetIdleTimer)
+  );
+}
+
+
 function renderAll() {
   renderDashboard();
   renderContracts('gov');
