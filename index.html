@@ -573,6 +573,7 @@ tr:hover td{background:rgba(240,165,0,.04)}
     <div class="inner-tab active" onclick="filterContracts('gov','allotted',this)">Allotted</div>
     <div class="inner-tab" onclick="filterContracts('gov','construction',this)">Under Construction</div>
     <div class="inner-tab" onclick="filterContracts('gov','completed',this)">Completed</div>
+    <div class="inner-tab" onclick="filterContracts('gov','lad',this)">🏛️ LAD Works</div>
     <div class="inner-tab" onclick="filterContracts('gov','all',this)">All</div>
   </div>
   <div class="tbl-wrap">
@@ -787,13 +788,36 @@ tr:hover td{background:rgba(240,165,0,.04)}
       <div class="form-group"><label>Length (m)</label><input type="number" id="mc-l" placeholder="0" oninput="calcMat()"></div>
       <div class="form-group"><label>Width (m)</label><input type="number" id="mc-w" placeholder="0" oninput="calcMat()"></div>
       <div class="form-group"><label>Thickness (m)</label><input type="number" id="mc-t" placeholder="0.15" oninput="calcMat()"></div>
-      <div class="form-group"><label>Truck capacity - Sand (CFT)</label><input type="number" id="mc-sand-truck" value="350" oninput="calcMat()"></div>
-      <div class="form-group"><label>Truck capacity - Agg (CFT)</label><input type="number" id="mc-agg-truck" value="350" oninput="calcMat()"></div>
     </div>
-    <div class="mat-result" id="mc-result" style="display:none">
-      <h5>Material Requirements</h5>
-      <div id="mc-rows"></div>
+  </div>
+  <div class="estimator-card">
+    <h4>Truck Capacity</h4>
+    <div class="inner-tabs" style="margin-bottom:14px">
+      <div class="inner-tab active" onclick="setTruckMode('cft',this)">Enter CFT directly</div>
+      <div class="inner-tab" onclick="setTruckMode('dim',this)">Enter Truck Dimensions</div>
     </div>
+    <div id="truck-cft-mode">
+      <div class="form-grid">
+        <div class="form-group"><label>Sand Truck Capacity (CFT)</label><input type="number" id="mc-sand-truck" value="350" oninput="calcMat()"></div>
+        <div class="form-group"><label>Aggregate Truck Capacity (CFT)</label><input type="number" id="mc-agg-truck" value="350" oninput="calcMat()"></div>
+      </div>
+    </div>
+    <div id="truck-dim-mode" style="display:none">
+      <div class="form-grid">
+        <div class="form-group"><label>Truck Length (ft)</label><input type="number" id="mc-tl" placeholder="14" oninput="calcTruckCFT()"></div>
+        <div class="form-group"><label>Truck Width (ft)</label><input type="number" id="mc-tw" placeholder="7" oninput="calcTruckCFT()"></div>
+        <div class="form-group"><label>Truck Height / Depth (ft)</label><input type="number" id="mc-th" placeholder="4" oninput="calcTruckCFT()"></div>
+        <div class="form-group"><label>Calculated Capacity (CFT)</label>
+          <input type="number" id="mc-truck-calc" readonly style="background:var(--bg-panel);opacity:.8" placeholder="Auto calculated"></div>
+      </div>
+      <div style="font-size:.8rem;color:var(--text-mid);margin-top:4px">
+        Same dimension used for both sand and aggregate trucks. Capacity = L × W × H
+      </div>
+    </div>
+  </div>
+  <div class="mat-result" id="mc-result" style="display:none">
+    <h5>Material Requirements</h5>
+    <div id="mc-rows"></div>
   </div>
 </div>
 
@@ -899,10 +923,10 @@ tr:hover td{background:rgba(240,165,0,.04)}
 
 <!-- ADD EXPENSE -->
 <div class="modal-overlay" id="modal-addExpense">
-<div class="modal">
+<div class="modal" style="width:700px">
   <button class="modal-close" onclick="closeModal('addExpense')">✕</button>
   <h3>Add Expense</h3>
-  <div class="form-grid">
+  <div class="form-grid" style="margin-bottom:14px">
     <div class="form-group">
       <label>Category</label>
       <select id="exp-cat" onchange="updateExpSubCat()">
@@ -915,15 +939,81 @@ tr:hover td{background:rgba(240,165,0,.04)}
     </div>
     <div class="form-group">
       <label>Sub-category</label>
-      <select id="exp-subcat"></select>
+      <select id="exp-subcat" onchange="updateExpItemSheet()"></select>
     </div>
-    <div class="form-group"><label>Amount ₹</label><input id="exp-amount" type="number" placeholder="0"></div>
     <div class="form-group"><label>Date</label><input id="exp-date" type="date"></div>
-    <div class="form-group full"><label>Notes</label><textarea id="exp-notes" placeholder="Optional notes..."></textarea></div>
+    <div class="form-group"><label>Notes / Reference</label><input id="exp-notes" type="text" placeholder="Optional notes..."></div>
   </div>
-  <div class="form-actions">
-    <button class="btn btn-secondary" onclick="closeModal('addExpense')">Cancel</button>
-    <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+
+  <!-- LABOUR SHEET (shown for labour category) -->
+  <div id="exp-labour-sheet" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--accent)">Labour / Supervisor Register</div>
+      <button class="btn btn-secondary btn-sm" onclick="addLabourRow()">+ Add Person</button>
+    </div>
+    <div class="tbl-wrap" style="margin-bottom:12px">
+      <table id="labourTable">
+        <thead><tr>
+          <th>Name</th><th>Role</th><th>Days / Units</th><th>Rate ₹</th><th>Amount ₹</th><th></th>
+        </tr></thead>
+        <tbody id="labourTbody"></tbody>
+        <tfoot><tr>
+          <td colspan="4" style="text-align:right;font-weight:700;padding:10px 14px">Total</td>
+          <td style="font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--accent);padding:10px 14px" id="labour-total">₹0</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- MATERIAL SHEET (shown for materials) -->
+  <div id="exp-material-sheet" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--accent)">Material Purchase Register</div>
+      <button class="btn btn-secondary btn-sm" onclick="addMaterialRow()">+ Add Item</button>
+    </div>
+    <div class="tbl-wrap" style="margin-bottom:12px">
+      <table id="materialTable">
+        <thead><tr>
+          <th>Item</th><th>Vendor / Source</th><th>Qty</th><th>Unit</th><th>Rate ₹</th><th>Amount ₹</th><th></th>
+        </tr></thead>
+        <tbody id="materialTbody"></tbody>
+        <tfoot><tr>
+          <td colspan="5" style="text-align:right;font-weight:700;padding:10px 14px">Total</td>
+          <td style="font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--accent);padding:10px 14px" id="material-total">₹0</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- GENERAL SHEET (transport, machinery, other) -->
+  <div id="exp-general-sheet" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--accent)">Expense Register</div>
+      <button class="btn btn-secondary btn-sm" onclick="addGeneralRow()">+ Add Item</button>
+    </div>
+    <div class="tbl-wrap" style="margin-bottom:12px">
+      <table id="generalTable">
+        <thead><tr>
+          <th>Description</th><th>Vendor / Party</th><th>Qty</th><th>Rate ₹</th><th>Amount ₹</th><th></th>
+        </tr></thead>
+        <tbody id="generalTbody"></tbody>
+        <tfoot><tr>
+          <td colspan="4" style="text-align:right;font-weight:700;padding:10px 14px">Total</td>
+          <td style="font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--accent);padding:10px 14px" id="general-total">₹0</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border)">
+    <div style="font-size:.88rem;color:var(--text-mid)">Grand Total: <strong id="exp-grand-total" style="color:var(--accent);font-size:1rem">₹0</strong></div>
+    <div class="form-actions" style="margin:0">
+      <button class="btn btn-secondary" onclick="closeModal('addExpense')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+    </div>
   </div>
 </div>
 </div>
@@ -1435,12 +1525,17 @@ function previewLAD() {
 function savePvtContract() {
   const name = document.getElementById('pc-name').value.trim();
   const client = document.getElementById('pc-client').value.trim();
-  const value = parseFloat(document.getElementById('pc-value').value)||0;
-  const months = parseInt(document.getElementById('pc-months').value)||6;
+  const value = Number(document.getElementById('pc-value').value) || 0;
+  const months = Number(document.getElementById('pc-months').value) || 6;
   const link = document.getElementById('pc-link').value.trim();
   if (!name || !value) { notify('Contract name and value required', 'error'); return; }
-  DATA.pvtContracts.push({ id: uid(), type: 'pvt', name, client, value, months, link,
-    status: 'allotted', createdAt: today(), expenses: [], payments: [] });
+  DATA.pvtContracts.push({
+    id: uid(), type: 'pvt', name, client,
+    value: +value,    // force numeric — prevents string concat bug
+    months: +months,
+    link,
+    status: 'allotted', createdAt: today(), expenses: [], payments: []
+  });
   saveData();
   closeModal('addPvtContract');
   ['pc-name','pc-client','pc-value','pc-months','pc-link'].forEach(id => document.getElementById(id).value = '');
@@ -1465,7 +1560,10 @@ function renderContracts(type) {
   const tbodyId = type === 'gov' ? 'govContractsTbl' : 'pvtContractsTbl';
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
-  const list = filter === 'all' ? contracts : contracts.filter(c => c.status === filter);
+  let list;
+  if (filter === 'all') list = contracts;
+  else if (filter === 'lad') list = contracts.filter(c => c.lad);
+  else list = contracts.filter(c => c.status === filter);
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:28px">
       No contracts found. Click "+ Add Contract" to get started.</td></tr>`;
@@ -1482,7 +1580,7 @@ function renderContracts(type) {
         <td>${c.emd ? fmt(c.emd) : '—'}</td>
         <td>${c.security ? fmt(c.security) : '—'}</td>
         <td>${statusBadge}</td>
-        <td>${c.lad ? '<span style="color:var(--accent)">✓ LAD</span>' : '—'}</td>
+        <td>${c.lad ? '<span style="color:var(--accent);font-weight:600">✓ LAD</span>' : '—'}</td>
         <td>${actions}</td>
       </tr>`;
     } else {
@@ -1532,9 +1630,9 @@ function viewContract(id, type) {
   const c = arr.find(x => x.id === id);
   if (!c) return;
   document.getElementById('cd-title').textContent = c.name;
-  const totalExp = (c.expenses||[]).reduce((s,e) => s+e.amount, 0);
-  const totalPay = (c.payments||[]).reduce((s,p) => s+p.amount, 0);
-  const receivable = c.value - totalPay;
+  const totalExp = (c.expenses||[]).reduce((s,e) => s+(+e.amount), 0);
+  const totalPay = (c.payments||[]).reduce((s,p) => s+(+p.amount), 0);
+  const receivable = (+c.value) - totalPay;
   document.getElementById('cd-info').innerHTML = `
     <div class="form-grid" style="margin-bottom:8px">
       <div><span style="color:var(--text-dim);font-size:.78rem">CLIENT</span><br>${c.client||'—'}</div>
@@ -1577,13 +1675,18 @@ function viewContract(id, type) {
   if (c.status === 'allotted') actions += `<button class="btn btn-success" onclick='startWork("${c.id}","${type}");closeModal("contractDetail")'>▶ Start Work</button>`;
   if (c.status === 'construction') actions += `<button class="btn btn-primary" onclick='markCompleted("${c.id}","${type}");closeModal("contractDetail")'>✓ Mark Completed</button>`;
   if (c.status === 'completed') actions += `<button class="btn btn-secondary" onclick='openTaxInvoice("${c.id}","${type}")'>📄 Tax Invoice</button>`;
+  if ((c.expenses||[]).length) actions += `<button class="btn btn-secondary" onclick='printExpenseSheet("${c.id}","${type}")'>🖨️ Print Expenses</button>`;
   if (type==='gov') actions += `<button class="btn btn-secondary" onclick='openReleaseDeposit("${c.id}")'>💰 Release Deposit</button>`;
   document.getElementById('cd-actions').innerHTML = actions;
   openModal('contractDetail');
 }
 function openAddExpense() {
-  updateExpSubCat();
+  labourRows = []; materialRows = []; generalRows = [];
+  document.getElementById('exp-cat').value = 'labour';
+  document.getElementById('exp-notes').value = '';
   document.getElementById('exp-date').value = today();
+  updateExpSubCat();
+  updateExpItemSheet();
   openModal('addExpense');
 }
 function openAddPayment() {
@@ -1592,47 +1695,240 @@ function openAddPayment() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  EXPENSES
+//  EXPENSES — ITEMISED SHEETS
 // ═══════════════════════════════════════════════════════════
 const EXP_SUBCATS = {
   labour: ['Labour Wages','Supervisor Wages'],
   materials: ['Bricks','Cement','Sand','Aggregate','Steel','Other Materials'],
-  transport: ['Transport'],
-  machinery: ['Machinery Hire','Machinery Repair'],
+  transport: ['Transport / Freight'],
+  machinery: ['Machinery Hire','Machinery Repair','Fuel'],
   other: ['Site Overhead','Legal/Admin','Miscellaneous']
 };
+
+// Temp rows for current expense entry
+let labourRows = [], materialRows = [], generalRows = [];
+
 function updateExpSubCat() {
   const cat = document.getElementById('exp-cat').value;
   const sub = document.getElementById('exp-subcat');
   sub.innerHTML = (EXP_SUBCATS[cat]||['Other']).map(s => `<option>${s}</option>`).join('');
+  updateExpItemSheet();
 }
+function updateExpItemSheet() {
+  const cat = document.getElementById('exp-cat').value;
+  document.getElementById('exp-labour-sheet').style.display = cat==='labour' ? 'block' : 'none';
+  document.getElementById('exp-material-sheet').style.display = cat==='materials' ? 'block' : 'none';
+  document.getElementById('exp-general-sheet').style.display = (cat==='transport'||cat==='machinery'||cat==='other') ? 'block' : 'none';
+  if (cat==='labour' && labourRows.length===0) addLabourRow();
+  if (cat==='materials' && materialRows.length===0) addMaterialRow();
+  if ((cat==='transport'||cat==='machinery'||cat==='other') && generalRows.length===0) addGeneralRow();
+}
+
+// ── LABOUR ROWS ───────────────────────────────────────────
+function addLabourRow() {
+  labourRows.push({ id: uid(), name:'', role:'Labour', days:0, rate:0 });
+  renderLabourRows();
+}
+function renderLabourRows() {
+  const tbody = document.getElementById('labourTbody');
+  tbody.innerHTML = labourRows.map(r => `
+    <tr>
+      <td><input value="${r.name}" onchange="updateLabourRow('${r.id}','name',this.value)"
+        placeholder="Worker name" style="width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input value="${r.role}" onchange="updateLabourRow('${r.id}','role',this.value)"
+        placeholder="Role" style="width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input type="number" value="${r.days||''}" oninput="updateLabourRow('${r.id}','days',this.value)"
+        placeholder="0" style="width:70px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input type="number" value="${r.rate||''}" oninput="updateLabourRow('${r.id}','rate',this.value)"
+        placeholder="0" style="width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--accent)">${fmt(r.days*r.rate)}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="delLabourRow('${r.id}')">✕</button></td>
+    </tr>`).join('');
+  const total = labourRows.reduce((s,r) => s+r.days*r.rate, 0);
+  document.getElementById('labour-total').textContent = fmt(total);
+  document.getElementById('exp-grand-total').textContent = fmt(total);
+}
+function updateLabourRow(id, field, val) {
+  const r = labourRows.find(x => x.id===id);
+  if (r) { r[field] = field==='days'||field==='rate' ? parseFloat(val)||0 : val; renderLabourRows(); }
+}
+function delLabourRow(id) { labourRows = labourRows.filter(r => r.id!==id); renderLabourRows(); }
+
+// ── MATERIAL ROWS ─────────────────────────────────────────
+function addMaterialRow() {
+  materialRows.push({ id: uid(), item:'', vendor:'', qty:0, unit:'', rate:0 });
+  renderMaterialRows();
+}
+function renderMaterialRows() {
+  const tbody = document.getElementById('materialTbody');
+  tbody.innerHTML = materialRows.map(r => `
+    <tr>
+      <td><input value="${r.item}" onchange="updateMaterialRow('${r.id}','item',this.value)"
+        placeholder="Item name" style="width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input value="${r.vendor}" onchange="updateMaterialRow('${r.id}','vendor',this.value)"
+        placeholder="Vendor" style="width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input type="number" value="${r.qty||''}" oninput="updateMaterialRow('${r.id}','qty',this.value)"
+        placeholder="0" style="width:60px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input value="${r.unit}" onchange="updateMaterialRow('${r.id}','unit',this.value)"
+        placeholder="bags/kg/CFT" style="width:70px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input type="number" value="${r.rate||''}" oninput="updateMaterialRow('${r.id}','rate',this.value)"
+        placeholder="0" style="width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--accent)">${fmt(r.qty*r.rate)}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="delMaterialRow('${r.id}')">✕</button></td>
+    </tr>`).join('');
+  const total = materialRows.reduce((s,r) => s+r.qty*r.rate, 0);
+  document.getElementById('material-total').textContent = fmt(total);
+  document.getElementById('exp-grand-total').textContent = fmt(total);
+}
+function updateMaterialRow(id, field, val) {
+  const r = materialRows.find(x => x.id===id);
+  if (r) { r[field] = field==='qty'||field==='rate' ? parseFloat(val)||0 : val; renderMaterialRows(); }
+}
+function delMaterialRow(id) { materialRows = materialRows.filter(r => r.id!==id); renderMaterialRows(); }
+
+// ── GENERAL ROWS ──────────────────────────────────────────
+function addGeneralRow() {
+  generalRows.push({ id: uid(), desc:'', vendor:'', qty:1, rate:0 });
+  renderGeneralRows();
+}
+function renderGeneralRows() {
+  const tbody = document.getElementById('generalTbody');
+  tbody.innerHTML = generalRows.map(r => `
+    <tr>
+      <td><input value="${r.desc}" onchange="updateGeneralRow('${r.id}','desc',this.value)"
+        placeholder="Description" style="width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input value="${r.vendor}" onchange="updateGeneralRow('${r.id}','vendor',this.value)"
+        placeholder="Party/Vendor" style="width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input type="number" value="${r.qty||''}" oninput="updateGeneralRow('${r.id}','qty',this.value)"
+        placeholder="1" style="width:60px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td><input type="number" value="${r.rate||''}" oninput="updateGeneralRow('${r.id}','rate',this.value)"
+        placeholder="0" style="width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-bright);padding:5px 8px;border-radius:5px;font-size:.82rem;outline:none"></td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--accent)">${fmt(r.qty*r.rate)}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="delGeneralRow('${r.id}')">✕</button></td>
+    </tr>`).join('');
+  const total = generalRows.reduce((s,r) => s+r.qty*r.rate, 0);
+  document.getElementById('general-total').textContent = fmt(total);
+  document.getElementById('exp-grand-total').textContent = fmt(total);
+}
+function updateGeneralRow(id, field, val) {
+  const r = generalRows.find(x => x.id===id);
+  if (r) { r[field] = field==='qty'||field==='rate' ? parseFloat(val)||0 : val; renderGeneralRows(); }
+}
+function delGeneralRow(id) { generalRows = generalRows.filter(r => r.id!==id); renderGeneralRows(); }
+
+// ── SAVE EXPENSE ──────────────────────────────────────────
 function saveExpense() {
-  const amount = parseFloat(document.getElementById('exp-amount').value)||0;
-  if (!amount) { notify('Amount required', 'error'); return; }
-  const exp = {
-    id: uid(),
-    cat: document.getElementById('exp-cat').value,
-    subcat: document.getElementById('exp-subcat').value,
-    amount,
-    date: document.getElementById('exp-date').value,
-    notes: document.getElementById('exp-notes').value
-  };
+  const cat = document.getElementById('exp-cat').value;
+  const subcat = document.getElementById('exp-subcat').value;
+  const date = document.getElementById('exp-date').value;
+  const notes = document.getElementById('exp-notes').value;
   const arr = currentContractType === 'gov' ? DATA.govContracts : DATA.pvtContracts;
   const c = arr.find(x => x.id === currentContractId);
-  if (c) {
-    if (!c.expenses) c.expenses = [];
-    c.expenses.push(exp);
-    saveData();
-    viewContract(currentContractId, currentContractType);
-    closeModal('addExpense');
-    renderDashboard();
-    notify('Expense saved!');
+  if (!c) return;
+  if (!c.expenses) c.expenses = [];
+
+  if (cat === 'labour') {
+    const total = labourRows.reduce((s,r) => s+r.days*r.rate, 0);
+    if (!total) { notify('Add at least one labour entry with amount', 'error'); return; }
+    c.expenses.push({
+      id: uid(), cat, subcat, amount: total, date, notes,
+      items: labourRows.map(r => ({ ...r }))
+    });
+  } else if (cat === 'materials') {
+    const total = materialRows.reduce((s,r) => s+r.qty*r.rate, 0);
+    if (!total) { notify('Add at least one material item', 'error'); return; }
+    c.expenses.push({
+      id: uid(), cat, subcat, amount: total, date, notes,
+      items: materialRows.map(r => ({ ...r }))
+    });
+  } else {
+    const total = generalRows.reduce((s,r) => s+r.qty*r.rate, 0);
+    if (!total) { notify('Add at least one expense item', 'error'); return; }
+    c.expenses.push({
+      id: uid(), cat, subcat, amount: total, date, notes,
+      items: generalRows.map(r => ({ ...r }))
+    });
   }
+
+  // Reset temp rows
+  labourRows = []; materialRows = []; generalRows = [];
+  saveData();
+  viewContract(currentContractId, currentContractType);
+  closeModal('addExpense');
+  renderDashboard();
+  notify('Expense saved!');
 }
+
 function delExpense(eid) {
   const arr = currentContractType === 'gov' ? DATA.govContracts : DATA.pvtContracts;
   const c = arr.find(x => x.id === currentContractId);
   if (c) { c.expenses = (c.expenses||[]).filter(e => e.id !== eid); saveData(); viewContract(currentContractId, currentContractType); renderDashboard(); }
+}
+
+// ── PRINT EXPENSE SHEET ───────────────────────────────────
+function printExpenseSheet(contractId, contractType) {
+  const arr = contractType === 'gov' ? DATA.govContracts : DATA.pvtContracts;
+  const c = arr.find(x => x.id === contractId);
+  if (!c) return;
+  const exps = c.expenses || [];
+  const total = exps.reduce((s,e) => s+e.amount, 0);
+  let rows = exps.map(e => {
+    let itemDetail = '';
+    if (e.items && e.items.length) {
+      if (e.cat === 'labour') {
+        itemDetail = `<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:.8rem">
+          <tr style="background:#f5f5f5"><th style="padding:4px 8px;text-align:left">Name</th><th>Role</th><th>Days</th><th>Rate</th><th>Amount</th></tr>
+          ${e.items.map(i => `<tr><td style="padding:4px 8px">${i.name}</td><td>${i.role}</td><td>${i.days}</td><td>₹${i.rate}</td><td>₹${(i.days*i.rate).toLocaleString('en-IN')}</td></tr>`).join('')}
+        </table>`;
+      } else if (e.cat === 'materials') {
+        itemDetail = `<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:.8rem">
+          <tr style="background:#f5f5f5"><th style="padding:4px 8px;text-align:left">Item</th><th>Vendor</th><th>Qty</th><th>Unit</th><th>Rate</th><th>Amount</th></tr>
+          ${e.items.map(i => `<tr><td style="padding:4px 8px">${i.item}</td><td>${i.vendor}</td><td>${i.qty}</td><td>${i.unit}</td><td>₹${i.rate}</td><td>₹${(i.qty*i.rate).toLocaleString('en-IN')}</td></tr>`).join('')}
+        </table>`;
+      } else {
+        itemDetail = `<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:.8rem">
+          <tr style="background:#f5f5f5"><th style="padding:4px 8px;text-align:left">Description</th><th>Party</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
+          ${e.items.map(i => `<tr><td style="padding:4px 8px">${i.desc}</td><td>${i.vendor}</td><td>${i.qty}</td><td>₹${i.rate}</td><td>₹${(i.qty*i.rate).toLocaleString('en-IN')}</td></tr>`).join('')}
+        </table>`;
+      }
+    }
+    return `<tr>
+      <td style="padding:8px;border-bottom:1px solid #eee;vertical-align:top">
+        <strong>${e.subcat||e.cat}</strong><br>
+        <small style="color:#888">${e.date||''} ${e.notes ? '| '+e.notes : ''}</small>
+        ${itemDetail}
+      </td>
+      <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;vertical-align:top;font-weight:600">₹${e.amount.toLocaleString('en-IN')}</td>
+    </tr>`;
+  }).join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>VNI Expense Sheet</title>
+    <style>*{box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:32px;max-width:780px;margin:auto;color:#222}
+    h2{color:#3a0ca3;font-size:1.4rem}table{width:100%;border-collapse:collapse}
+    th{background:#3a0ca3;color:#fff;padding:8px 10px;text-align:left}
+    .total{background:#fff3e0;font-weight:700;font-size:1rem}
+    .header-bar{border-bottom:3px solid #f77f00;padding-bottom:10px;margin-bottom:20px}
+    .tag{color:#f77f00;font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase}
+    </style></head><body>
+    <div class="header-bar">
+      <h2>Vinayam Nirmanam Infra — Expense Sheet</h2>
+      <div class="tag">Construction with Integrity</div>
+      <p style="margin-top:6px;color:#666;font-size:.82rem">VNI Bhawan, Rapti Nagar, Gorakhpur UP-273003 | +91 8851965533</p>
+    </div>
+    <p style="margin-bottom:16px"><strong>Contract:</strong> ${c.name} &nbsp;|&nbsp; <strong>Client:</strong> ${c.client||'—'} &nbsp;|&nbsp; <strong>Value:</strong> ₹${c.value.toLocaleString('en-IN')}</p>
+    <table>
+      <thead><tr><th>Expense Details</th><th style="text-align:right;width:130px">Amount ₹</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="total">
+        <td style="padding:10px 8px;text-align:right">TOTAL EXPENSES</td>
+        <td style="padding:10px 8px;text-align:right">₹${total.toLocaleString('en-IN')}</td>
+      </tr></tfoot>
+    </table>
+    <p style="margin-top:24px;color:#aaa;font-size:.78rem;text-align:right">
+      Generated: ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'})}
+    </p></body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 function savePayment() {
   const amount = parseFloat(document.getElementById('pay-amount').value)||0;
@@ -2219,22 +2515,52 @@ function exportBOQ() {
 // ═══════════════════════════════════════════════════════════
 //  MATERIAL CALCULATOR
 // ═══════════════════════════════════════════════════════════
+let truckMode = 'cft'; // 'cft' or 'dim'
+function setTruckMode(mode, el) {
+  truckMode = mode;
+  el.closest('.inner-tabs').querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('truck-cft-mode').style.display = mode==='cft' ? 'block' : 'none';
+  document.getElementById('truck-dim-mode').style.display = mode==='dim' ? 'block' : 'none';
+  calcMat();
+}
+function calcTruckCFT() {
+  const l = parseFloat(document.getElementById('mc-tl').value)||0;
+  const w = parseFloat(document.getElementById('mc-tw').value)||0;
+  const h = parseFloat(document.getElementById('mc-th').value)||0;
+  const cft = l * w * h;
+  document.getElementById('mc-truck-calc').value = cft > 0 ? cft.toFixed(1) : '';
+  calcMat();
+}
 function calcMat() {
   const l=parseFloat(document.getElementById('mc-l').value)||0;
   const w=parseFloat(document.getElementById('mc-w').value)||0;
   const t=parseFloat(document.getElementById('mc-t').value)||0;
   if (!l||!w||!t) { document.getElementById('mc-result').style.display='none'; return; }
-  const vol=l*w*t;
-  const cement=vol*CEMENT_M3; const sand=vol*SAND_M3; const agg=vol*AGG_M3;
-  const sandTruck=parseFloat(document.getElementById('mc-sand-truck').value)||350;
-  const aggTruck=parseFloat(document.getElementById('mc-agg-truck').value)||350;
-  const sandTrucks=Math.ceil(sand/sandTruck); const aggTrucks=Math.ceil(agg/aggTruck);
-  document.getElementById('mc-result').style.display='block';
+  const vol = l * w * t;
+  const cement = vol * CEMENT_M3;
+  const sand   = vol * SAND_M3;
+  const agg    = vol * AGG_M3;
+  let sandTruck, aggTruck;
+  if (truckMode === 'dim') {
+    const tl = parseFloat(document.getElementById('mc-tl').value)||0;
+    const tw = parseFloat(document.getElementById('mc-tw').value)||0;
+    const th = parseFloat(document.getElementById('mc-th').value)||0;
+    const cap = tl * tw * th || 350;
+    sandTruck = cap; aggTruck = cap;
+  } else {
+    sandTruck = parseFloat(document.getElementById('mc-sand-truck').value)||350;
+    aggTruck  = parseFloat(document.getElementById('mc-agg-truck').value)||350;
+  }
+  const sandTrucks = Math.ceil(sand / sandTruck);
+  const aggTrucks  = Math.ceil(agg  / aggTruck);
+  document.getElementById('mc-result').style.display = 'block';
   document.getElementById('mc-rows').innerHTML = `
     <div class="result-row"><span class="result-label">Concrete Volume</span><span class="result-value">${vol.toFixed(3)} m³</span></div>
     <div class="result-row"><span class="result-label">Cement Required</span><span class="result-value">${Math.ceil(cement)} bags (50kg)</span></div>
     <div class="result-row"><span class="result-label">Sand Required</span><span class="result-value">${sand.toFixed(1)} CFT</span></div>
     <div class="result-row"><span class="result-label">Aggregate Required</span><span class="result-value">${agg.toFixed(1)} CFT</span></div>
+    <div class="result-row"><span class="result-label">Truck Capacity Used</span><span class="result-value">${sandTruck} CFT</span></div>
     <div class="result-row"><span class="result-label">Sand Trucks (approx.)</span><span class="result-value" style="color:var(--accent)">${sandTrucks} trucks</span></div>
     <div class="result-row"><span class="result-label">Aggregate Trucks (approx.)</span><span class="result-value" style="color:var(--accent)">${aggTrucks} trucks</span></div>`;
 }
