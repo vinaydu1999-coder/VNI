@@ -826,8 +826,8 @@ tr:hover td{background:rgba(240,165,0,.04)}
       <div class="lad-result">
         <div style="color:var(--accent);font-weight:600;margin-bottom:10px">LAD Work Calculator</div>
         <div class="form-grid">
-          <div class="form-group"><label>Commission for Work %</label><input id="lad-comm-work" type="number" value="15" oninput="previewLAD()"></div>
-          <div class="form-group"><label>Commission to Authority %</label><input id="lad-comm-auth" type="number" value="16" oninput="previewLAD()"></div>
+          <div class="form-group"><label>Joint Venture Personal %</label><input id="lad-comm-work" type="number" value="15" oninput="previewLAD()"></div>
+          <div class="form-group"><label>Joint Venture Office %</label><input id="lad-comm-auth" type="number" value="16" oninput="previewLAD()"></div>
           <div class="form-group"><label>Net Profit % (excl. GST)</label><input id="lad-profit" type="number" value="10" oninput="previewLAD()"></div>
           <div class="form-group"><label>Expected Expenses ₹</label><input id="lad-expenses" type="number" placeholder="0" oninput="previewLAD()"></div>
         </div>
@@ -1386,8 +1386,8 @@ function previewLAD() {
   const profitPct = (expectedProfit / value * 100).toFixed(1);
   document.getElementById('lad-preview').innerHTML = `
     <div style="font-size:.82rem">
-      <div class="result-row"><span class="result-label">Commission (Work ${cw}%)</span><span class="result-value">${fmt(commWork)}</span></div>
-      <div class="result-row"><span class="result-label">Commission (Authority ${ca}%)</span><span class="result-value">${fmt(commAuth)}</span></div>
+      <div class="result-row"><span class="result-label">Joint Venture Personal (${cw}%)</span><span class="result-value">${fmt(commWork)}</span></div>
+      <div class="result-row"><span class="result-label">Joint Venture Office (${ca}%)</span><span class="result-value">${fmt(commAuth)}</span></div>
       <div class="result-row"><span class="result-label">TDS (2%)</span><span class="result-value">${fmt(tds)}</span></div>
       <div class="result-row"><span class="result-label">Expected Expenses</span><span class="result-value">${fmt(exp)}</span></div>
       <div class="result-row"><span class="result-label">Expected Profit</span><span class="result-value" style="color:var(--green)">${fmt(expectedProfit)} (${profitPct}%)</span></div>
@@ -1700,9 +1700,9 @@ function calcInvoice() {
         const ladCommAuth = c.value * (c.ladCommAuth||16) / 100;
         commTotal = ladCommWork + ladCommAuth;
         expBreakdown += `
-          <div class="fin-row"><span class="fin-label">&nbsp;&nbsp;• LAD Commission (Work ${c.ladCommWork||15}%)</span>
+          <div class="fin-row"><span class="fin-label">&nbsp;&nbsp;• Joint Venture Personal (${c.ladCommWork||15}%)</span>
            <span class="fin-val" style="color:#d62828">− ${fmt(ladCommWork)}</span></div>
-          <div class="fin-row"><span class="fin-label">&nbsp;&nbsp;• LAD Commission (Authority ${c.ladCommAuth||16}%)</span>
+          <div class="fin-row"><span class="fin-label">&nbsp;&nbsp;• Joint Venture Office (${c.ladCommAuth||16}%)</span>
            <span class="fin-val" style="color:#d62828">− ${fmt(ladCommAuth)}</span></div>`;
       }
     }
