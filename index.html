@@ -2351,70 +2351,94 @@ function calcTender() {
     ];
   } else if (type === 'culvert') {
     const g2 = id => { const el = document.getElementById(id); return el ? parseFloat(el.value)||0 : 0; };
-    const L_clear = g('te-l') || 2;
-    const roadWidth = g('te-w') || 6;
-    const H = g2('te-fillh') || 1.5;
-    const wallH = g('te-h') || 2;
-    const brickM3 = g2('te-brickm3') || 5000;
-    const pccRate = g2('te-pcc') || 7000;
-    const rccRate = g2('te-rcc') || 12000;
+    const L_clear  = g('te-l')       || 2;
+    const roadWidth= g('te-w')       || 6;
+    const H        = g2('te-fillh')  || 1.5;
+    const wallH    = g('te-h')       || 2;
+    const brickM3  = g2('te-brickm3')|| 5000;
+    const pccRate  = g2('te-pcc')    || 7000;
+    const rccRate  = g2('te-rcc')    || 12000;
     const plasterRate = g2('te-plaster') || 200;
 
-    // Auto design parameters (IS code based)
-    const slabThick = L_clear <= 2 ? 0.2 : (L_clear <= 3 ? 0.25 : 0.3);
-    const wallThick = wallH <= 2 ? 0.45 : 0.57;
+    // ── Auto design (IS code) ─────────────────────────────
+    const slabThick  = L_clear <= 2 ? 0.2 : (L_clear <= 3 ? 0.25 : 0.3);
+    const wallThick  = wallH   <= 2 ? 0.45 : 0.57;
     const parapetThick = 0.23;
-    const parapetH = 0.75;
-    const bearing = 0.15;
-    const d = slabThick - 0.02;
-    const fy = 415;
-    const L = L_clear + bearing;
+    const parapetH   = 0.75;
+    const bearing    = 0.15;
+    const d          = slabThick - 0.02;
+    const L          = L_clear + bearing;
 
-    // Loads & BM
-    const deadLoad = slabThick * 25;
-    const earthLoad = H * 18;
-    const totalLoad = deadLoad + earthLoad;
-    const M = (totalLoad * L * L) / 8;
-    const As = (M * 1e6) / (0.87 * fy * 0.9 * d * 1000);
+    // ── Structural analysis ───────────────────────────────
+    const deadLoad   = slabThick * 25;
+    const earthLoad  = H * 18;
+    const totalLoad  = deadLoad + earthLoad;
+    const M          = (totalLoad * L * L) / 8;
+    const As         = (M * 1e6) / (0.87 * 415 * 0.9 * d * 1000);
 
-    // Quantities
-    const wallVol    = wallThick * wallH * roadWidth * 2;
-    const slabVol    = slabThick * roadWidth * L_clear;
-    const pccVol     = 0.15 * roadWidth * L_clear;
-    const parapetVol = parapetThick * parapetH * roadWidth * 2;
-    const steelKg    = As * L_clear * 2 / 1000;
-    const plasterArea = (wallVol + parapetVol) * 6;
+    // ── Quantities ────────────────────────────────────────
+    // Brickwork: 2 side walls (length × height × thickness)
+    const wallVol    = wallThick * wallH * roadWidth * 2;          // m³
+    // PCC bed: 0.15m thick under slab + 0.3m each side projection
+    const pccVol     = 0.15 * (roadWidth + 0.6) * (L_clear + 0.6);// m³
+    // RCC slab: spans clear + bearing both sides
+    const slabVol    = slabThick * roadWidth * L;                  // m³
+    // Parapet walls both sides along road width
+    const parapetVol = parapetThick * parapetH * roadWidth * 2;   // m³
+    // Steel in slab (main + dist)
+    const steelKg    = As * L_clear * roadWidth / 1000 * 1.3;     // kg (×1.3 for distribution steel)
+    // Plaster: inner faces of walls + parapet (2 faces each)
+    const plasterArea= (wallH * roadWidth * 2) + (parapetH * roadWidth * 2); // m²
 
-    // Costs
-    const brickCost   = wallVol * brickM3;
-    const pccCost     = pccVol * pccRate;
-    const rccCost     = slabVol * rccRate;
-    const steelCost   = steelKg * steelP;
-    const plasterCost = plasterArea * plasterRate;
+    // ── Cost breakdown ────────────────────────────────────
+    const brickCost   = wallVol    * brickM3;
+    const pccCost     = pccVol     * pccRate;
+    const rccCost     = slabVol    * rccRate;
+    const steelCost   = steelKg    * steelP;
+    const plasterCost = plasterArea* plasterRate;
     totalCost = brickCost + pccCost + rccCost + steelCost + plasterCost;
 
     results = [
-      {label:'— DESIGN PARAMETERS —', val:''},
-      {label:'Effective Span (L)',         val:`${L.toFixed(2)} m`},
-      {label:'Auto Slab Thickness',        val:`${slabThick.toFixed(2)} m`},
-      {label:'Auto Wall Thickness',        val:`${wallThick.toFixed(2)} m`},
-      {label:'Dead + Earth Load',          val:`${totalLoad.toFixed(2)} kN/m`},
-      {label:'Max Bending Moment (M)',     val:`${M.toFixed(2)} kNm/m`},
-      {label:'Required Steel Area (Aₛ)',   val:`${As.toFixed(0)} mm²/m`},
-      {label:'— QUANTITIES —', val:''},
-      {label:'Brickwork (Side Walls)',     val:`${wallVol.toFixed(2)} m³`},
-      {label:'PCC Foundation',             val:`${pccVol.toFixed(2)} m³`},
-      {label:'RCC Slab',                   val:`${slabVol.toFixed(2)} m³`},
-      {label:'Parapet Walls',              val:`${parapetVol.toFixed(2)} m³`},
-      {label:'Steel Weight',               val:`${steelKg.toFixed(2)} kg`},
-      {label:'Plaster Area',               val:`${plasterArea.toFixed(2)} m²`},
-      {label:'— COST BREAKDOWN —', val:''},
-      {label:'Brickwork Cost',             val:`${fmt(brickCost)}`},
-      {label:'PCC Cost',                   val:`${fmt(pccCost)}`},
-      {label:'RCC Slab Cost',              val:`${fmt(rccCost)}`},
-      {label:`Steel Cost (₹${steelP}/kg)`, val:`${fmt(steelCost)}`},
-      {label:'Plaster Cost',               val:`${fmt(plasterCost)}`},
-      {label:'Total Material Cost',        val:`${fmt(totalCost)}`},
+      {label:'— STRUCTURAL DESIGN —', val:''},
+      {label:'Effective Span',            val:`${L.toFixed(2)} m`},
+      {label:'Slab Thickness (auto)',     val:`${(slabThick*100).toFixed(0)} cm`},
+      {label:'Wall Thickness (auto)',     val:`${(wallThick*100).toFixed(0)} cm`},
+      {label:'Total Design Load',         val:`${totalLoad.toFixed(2)} kN/m`},
+      {label:'Max Bending Moment',        val:`${M.toFixed(2)} kNm/m`},
+      {label:'Required Steel Area (Aₛ)', val:`${As.toFixed(0)} mm²/m`},
+
+      {label:'— BRICKWORK (Side Walls) —', val:''},
+      {label:'Volume',   val:`${wallVol.toFixed(3)} m³`},
+      {label:'Rate',     val:`₹${brickM3.toLocaleString('en-IN')}/m³`},
+      {label:'Amount',   val:fmt(brickCost)},
+
+      {label:'— PCC FOUNDATION —', val:''},
+      {label:'Volume',   val:`${pccVol.toFixed(3)} m³`},
+      {label:'Rate',     val:`₹${pccRate.toLocaleString('en-IN')}/m³`},
+      {label:'Amount',   val:fmt(pccCost)},
+
+      {label:'— RCC SLAB —', val:''},
+      {label:'Volume',   val:`${slabVol.toFixed(3)} m³`},
+      {label:'Rate',     val:`₹${rccRate.toLocaleString('en-IN')}/m³`},
+      {label:'Amount',   val:fmt(rccCost)},
+
+      {label:'— PARAPET WALLS (Brick) —', val:''},
+      {label:'Volume',   val:`${parapetVol.toFixed(3)} m³`},
+      {label:'Rate',     val:`₹${brickM3.toLocaleString('en-IN')}/m³`},
+      {label:'Amount',   val:fmt(parapetVol * brickM3)},
+
+      {label:'— STEEL REINFORCEMENT —', val:''},
+      {label:'Weight',   val:`${steelKg.toFixed(2)} kg`},
+      {label:'Rate',     val:`₹${steelP}/kg`},
+      {label:'Amount',   val:fmt(steelCost)},
+
+      {label:'— PLASTER (Inner Faces) —', val:''},
+      {label:'Area',     val:`${plasterArea.toFixed(2)} m²`},
+      {label:'Rate',     val:`₹${plasterRate}/m²`},
+      {label:'Amount',   val:fmt(plasterCost)},
+
+      {label:'— TOTAL COST —', val:''},
+      {label:'Total Material Cost', val:fmt(totalCost)},
     ];
   }
   const profit = tender - totalCost;
