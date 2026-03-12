@@ -670,7 +670,7 @@ tr:hover td{background:rgba(240,165,0,.04)}
         <select id="te-type" onchange="renderTenderInputs()">
           <option value="ccroad">CC Road</option>
           <option value="brickwall">Brick Wall</option>
-          <option value="culvert">3m Brick Culvert</option>
+          <option value="culvert">Smart Culvert Design</option>
         </select>
       </div>
       <div class="form-group">
@@ -2301,10 +2301,14 @@ function renderTenderInputs() {
       <div class="form-group"><label>Brick Price (per piece) ₹</label><input type="number" id="te-brick" value="8" oninput="calcTender()"></div>`;
   } else if (type === 'culvert') {
     dims.innerHTML = `
-      <div class="form-group"><label>Length (m)</label><input type="number" id="te-l" placeholder="3" value="3" oninput="calcTender()"></div>
-      <div class="form-group"><label>Width (m)</label><input type="number" id="te-w" placeholder="2" value="2" oninput="calcTender()"></div>
-      <div class="form-group"><label>Wall Height (m)</label><input type="number" id="te-h" placeholder="1" value="1" oninput="calcTender()"></div>
-      <div class="form-group"><label>Slab Thickness (m)</label><input type="number" id="te-t" value="0.2" oninput="calcTender()"></div>`;
+      <div class="form-group"><label>Clear Span (m)</label><input type="number" id="te-l" value="2" step="0.01" oninput="calcTender()"></div>
+      <div class="form-group"><label>Road Width (m)</label><input type="number" id="te-w" value="6" step="0.01" oninput="calcTender()"></div>
+      <div class="form-group"><label>Earth Fill Height (m)</label><input type="number" id="te-fillh" value="1.5" step="0.01" oninput="calcTender()"></div>
+      <div class="form-group"><label>Side Wall Height (m)</label><input type="number" id="te-h" value="2" step="0.01" oninput="calcTender()"></div>
+      <div class="form-group"><label>Brick Rate (₹/m³)</label><input type="number" id="te-brickm3" value="5000" oninput="calcTender()"></div>
+      <div class="form-group"><label>PCC Rate (₹/m³)</label><input type="number" id="te-pcc" value="7000" oninput="calcTender()"></div>
+      <div class="form-group"><label>RCC Rate (₹/m³)</label><input type="number" id="te-rcc" value="12000" oninput="calcTender()"></div>
+      <div class="form-group"><label>Plaster Rate (₹/m²)</label><input type="number" id="te-plaster" value="200" oninput="calcTender()"></div>`;
   }
   calcTender();
 }
@@ -2346,20 +2350,71 @@ function calcTender() {
       {label:'Total Material Cost',val:fmt(cost)},
     ];
   } else if (type === 'culvert') {
-    const L=g('te-l'),W=g('te-w'),H=g('te-h'),T=g('te-t');
-    const slabVol = L*W*T; const wallVol = 2*(L*H*0.23) + 2*(W*H*0.23);
-    const totalVol = slabVol + wallVol;
-    const cement = totalVol*CEMENT_M3; const sand = totalVol*SAND_M3; const agg = totalVol*AGG_M3;
-    const cost = cement*cementP + sand*sandP + agg*aggP;
-    totalCost = cost;
+    const g2 = id => { const el = document.getElementById(id); return el ? parseFloat(el.value)||0 : 0; };
+    const L_clear = g('te-l') || 2;
+    const roadWidth = g('te-w') || 6;
+    const H = g2('te-fillh') || 1.5;
+    const wallH = g('te-h') || 2;
+    const brickM3 = g2('te-brickm3') || 5000;
+    const pccRate = g2('te-pcc') || 7000;
+    const rccRate = g2('te-rcc') || 12000;
+    const plasterRate = g2('te-plaster') || 200;
+
+    // Auto design parameters (IS code based)
+    const slabThick = L_clear <= 2 ? 0.2 : (L_clear <= 3 ? 0.25 : 0.3);
+    const wallThick = wallH <= 2 ? 0.45 : 0.57;
+    const parapetThick = 0.23;
+    const parapetH = 0.75;
+    const bearing = 0.15;
+    const d = slabThick - 0.02;
+    const fy = 415;
+    const L = L_clear + bearing;
+
+    // Loads & BM
+    const deadLoad = slabThick * 25;
+    const earthLoad = H * 18;
+    const totalLoad = deadLoad + earthLoad;
+    const M = (totalLoad * L * L) / 8;
+    const As = (M * 1e6) / (0.87 * fy * 0.9 * d * 1000);
+
+    // Quantities
+    const wallVol    = wallThick * wallH * roadWidth * 2;
+    const slabVol    = slabThick * roadWidth * L_clear;
+    const pccVol     = 0.15 * roadWidth * L_clear;
+    const parapetVol = parapetThick * parapetH * roadWidth * 2;
+    const steelKg    = As * L_clear * 2 / 1000;
+    const plasterArea = (wallVol + parapetVol) * 6;
+
+    // Costs
+    const brickCost   = wallVol * brickM3;
+    const pccCost     = pccVol * pccRate;
+    const rccCost     = slabVol * rccRate;
+    const steelCost   = steelKg * steelP;
+    const plasterCost = plasterArea * plasterRate;
+    totalCost = brickCost + pccCost + rccCost + steelCost + plasterCost;
+
     results = [
-      {label:'Slab Volume',val:`${slabVol.toFixed(2)} m³`},
-      {label:'Wall Volume',val:`${wallVol.toFixed(2)} m³`},
-      {label:'Total Concrete',val:`${totalVol.toFixed(2)} m³`},
-      {label:'Cement',val:`${cement.toFixed(0)} bags × ₹${cementP} = ${fmt(cement*cementP)}`},
-      {label:'Sand',val:`${sand.toFixed(1)} CFT × ₹${sandP} = ${fmt(sand*sandP)}`},
-      {label:'Aggregate',val:`${agg.toFixed(1)} CFT × ₹${aggP} = ${fmt(agg*aggP)}`},
-      {label:'Total Material Cost',val:fmt(cost)},
+      {label:'— DESIGN PARAMETERS —', val:''},
+      {label:'Effective Span (L)',         val:`${L.toFixed(2)} m`},
+      {label:'Auto Slab Thickness',        val:`${slabThick.toFixed(2)} m`},
+      {label:'Auto Wall Thickness',        val:`${wallThick.toFixed(2)} m`},
+      {label:'Dead + Earth Load',          val:`${totalLoad.toFixed(2)} kN/m`},
+      {label:'Max Bending Moment (M)',     val:`${M.toFixed(2)} kNm/m`},
+      {label:'Required Steel Area (Aₛ)',   val:`${As.toFixed(0)} mm²/m`},
+      {label:'— QUANTITIES —', val:''},
+      {label:'Brickwork (Side Walls)',     val:`${wallVol.toFixed(2)} m³`},
+      {label:'PCC Foundation',             val:`${pccVol.toFixed(2)} m³`},
+      {label:'RCC Slab',                   val:`${slabVol.toFixed(2)} m³`},
+      {label:'Parapet Walls',              val:`${parapetVol.toFixed(2)} m³`},
+      {label:'Steel Weight',               val:`${steelKg.toFixed(2)} kg`},
+      {label:'Plaster Area',               val:`${plasterArea.toFixed(2)} m²`},
+      {label:'— COST BREAKDOWN —', val:''},
+      {label:'Brickwork Cost',             val:`${fmt(brickCost)}`},
+      {label:'PCC Cost',                   val:`${fmt(pccCost)}`},
+      {label:'RCC Slab Cost',              val:`${fmt(rccCost)}`},
+      {label:`Steel Cost (₹${steelP}/kg)`, val:`${fmt(steelCost)}`},
+      {label:'Plaster Cost',               val:`${fmt(plasterCost)}`},
+      {label:'Total Material Cost',        val:`${fmt(totalCost)}`},
     ];
   }
   const profit = tender - totalCost;
@@ -2370,7 +2425,10 @@ function calcTender() {
   const resCard = document.getElementById('te-results');
   resCard.style.display = totalCost > 0 ? 'block' : 'none';
   document.getElementById('te-result-rows').innerHTML = results.map((r,i) =>
-    `<div class="result-row ${i===results.length-1?'':''}">
+    r.val === '' ?
+    `<div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--accent);
+      font-size:.8rem;letter-spacing:1.5px;padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px">${r.label}</div>` :
+    `<div class="result-row">
       <span class="result-label">${r.label}</span>
       <span class="result-value" ${r.highlight!==undefined?(r.highlight?'style="color:var(--green)"':'style="color:var(--red)"'):''}>${r.val}</span>
     </div>`).join('');
